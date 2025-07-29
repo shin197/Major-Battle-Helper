@@ -1,3 +1,4 @@
+import { waitFor} from "../utils/wait-for";
 
 const TAB_SCROLLER = "#root div.MuiDrawer-docked form header div.MuiTabs-scroller"
 const TAB_BTN_SEL      = `${TAB_SCROLLER} > div > button[role='tab']`
@@ -6,6 +7,12 @@ const TAB_BAR      = "div.MuiTabs-scroller.MuiTabs-hideScrollbar";
 const MAIN_TAB_ID  = "main";           // 첫 번째 탭의 id(또는 data-value)가 ‘main’
 
 let logObs: MutationObserver | null = null
+
+type DiceResult = {
+  S: number | null              // 필수
+  isCritical: boolean           // 필수
+  unitCount?: number             // 선택: 항상 계산되는 값이 아니라면 ?
+}
 
 const DICE_LINE_REGEX =
   /\(\d+\s*TY\s*\d+\)\s*[＞>]\s*[\d,\s]+?\s*[＞>]\s*(?:\[\d+\]×\d+(?:,\s*)?)+\s*$/u
@@ -18,7 +25,7 @@ function handleLine(el: HTMLElement, currentBox: HTMLElement) {
   const diceNode = el.querySelector("p > span.MuiTypography-root.MuiTypography-body2")
 
   if(!diceNode) return
-
+ 
   const text = getOwnText(el.querySelector("p > span.MuiTypography-root.MuiTypography-body2")) 
 
   // console.log(text)
@@ -31,17 +38,17 @@ function handleLine(el: HTMLElement, currentBox: HTMLElement) {
   // console.log(text2)
   // if (!DICE_LINE_REGEX.test(text)) return
 
-  const { S, isCritical } = calcSuccess(text2)   // S 계산 + 대성공 여부 반환하도록 수정
+  const diceResult = calcSuccess(text2)   // S 계산 + 대성공 여부 반환하도록 수정
   const color =
-    S === 0             ? "#888" :
-    isCritical          ? "#29b6f6" : // 파랑
+    diceResult.S === 0             ? "#888" :
+    diceResult.isCritical          ? "#29b6f6" : // 파랑
                           "#fff"      // 흰색
                           
   const badge = document.createElement("span")
   badge.dataset.helper = "dice-result"
-  badge.style.cssText = `margin-left:.5em;font-weight:${isCritical ? 700 : 400};
+  badge.style.cssText = `margin-left:.5em;font-weight:${diceResult.isCritical ? 700 : 400};
                        color:${color}`
-  badge.textContent = `\u{1F3B2}S=${S}`; // \u{1F3B2} == 🎲
+  badge.textContent = `\u{1F3B2}S=${diceResult.S}${diceResult.unitCount != null ? ` #️⃣${diceResult.unitCount}` : ""}` // \u{1F3B2} == 🎲
 
   const diceSpan = el.querySelector<HTMLSpanElement>("p > span")
   diceSpan?.insertAdjacentElement("afterend", badge)
@@ -56,7 +63,7 @@ function handleLine(el: HTMLElement, currentBox: HTMLElement) {
      header div.MuiTabs-scroller.MuiTabs-hideScrollbar.MuiTabs-scrollableX"
 
   // ❶ 탭 리스트 div가 화면에 나타날 때까지 기다림
-  const tabList = await waitForElem(TAB_LIST_SEL)
+  const tabList = await waitFor(TAB_LIST_SEL)
 
   // ❷ 현재 선택된 탭 버튼 얻기
   let activeBtn = await getActiveBtn(tabList)
@@ -133,32 +140,8 @@ function handleLine(el: HTMLElement, currentBox: HTMLElement) {
 
 })()
 
-function waitForElem(
-  sel: string,
-  timeout = 10_000
-): Promise<HTMLElement> {
-  return new Promise((res, rej) => {
-    const found = document.querySelector<HTMLElement>(sel)
-    if (found) return res(found)
 
-    const obs = new MutationObserver(() => {
-      const el = document.querySelector<HTMLElement>(sel)
-      if (el) {
-        obs.disconnect()
-        clearTimeout(tId)
-        res(el)
-      }
-    })
-    obs.observe(document.body, { childList: true, subtree: true })
-
-    const tId = setTimeout(() => {
-      obs.disconnect()
-      rej(Error(`timeout: selector ${sel}`))
-    }, timeout)
-  })
-}
-
-function calcSuccess(rawLine: string): { S: number | null; isCritical: boolean } {
+function calcSuccess(rawLine: string): DiceResult {
   try {
     const HEAD_REGEX = /(?<cnt>[0-9+\-*/()\s]+)\s*TY\s*(?<size>\d+)[^(【]*(?:\((?<opts>[^)]*)\))?/u;
 
@@ -184,11 +167,10 @@ function calcSuccess(rawLine: string): { S: number | null; isCritical: boolean }
 
     const hasBang = flags.some((f) => f === "!");
     const groupified = flags.some((f) => f.startsWith("#"));
-    // const hasNeg = flags.some((f) => f === "neg")
+    const hasNeg = flags.some((f) => f === "neg")
 
     // console.log({ dice, tySize, plus, flags });
-    // console.log(dice, plus)
-
+    
     /* ③ S 계산 */
     let S = 0
     const tier = tySize <= 4 ? 1
@@ -204,7 +186,12 @@ function calcSuccess(rawLine: string): { S: number | null; isCritical: boolean }
     let maxS = Infinity
     const count = Number((flags.find(f => /^#\d+$/.test(f)) ?? "1").slice(1));
     const diceCount = Math.floor(dice.length / count)
+    let unitCount = count;
 
+    // console.log(unitCount)
+
+    let minS = Infinity
+    let atLeast4 = 0;
     for (const v of dice) {
       // 기본 성공치
       let add =
@@ -228,7 +215,15 @@ function calcSuccess(rawLine: string): { S: number | null; isCritical: boolean }
       /* (+2) : 5의 보너스 & ‘1’ 무시 조건① */
       if (plus >= 2 && v === 5) add = 2
 
-      S += add
+      if(!hasNeg){
+        S += add
+        atLeast4 += add >= 1 ? 1 : 0
+      }else{
+        minS = Math.min(minS, add)
+        S = minS
+        atLeast4 = S >= 1 ? 1 : 0
+      }
+      
     }
 
     const onePenalty =
@@ -240,6 +235,7 @@ function calcSuccess(rawLine: string): { S: number | null; isCritical: boolean }
       // 그룹화 룰
       maxS = Math.max(tier * (count - ones) * diceCount, 0)
       S = Math.min(maxS, S)
+      unitCount = Math.max(Math.min(count - ones, atLeast4), 0)
       // console.log(tier, count, diceCount)
       // console.log("maxS: ",maxS)
     }else{
@@ -247,14 +243,19 @@ function calcSuccess(rawLine: string): { S: number | null; isCritical: boolean }
       if (onePenalty > 0 && !hasBang) S = 0
 
       /* 대성공 배수 */
-      if (maxCount >= 2 && S > 0) S *= maxCount
+      if (maxCount >= 2 && S > 0 && !hasNeg) S *= maxCount
     }
 
-    return { S, isCritical: maxCount >= 2 && S > 0 }
+    return { S,
+      isCritical: maxCount >= 2 && S > 0,
+      ...(groupified ? { unitCount } : {})
+    }
   } catch {
     return { S: null, isCritical: false }
   }
 }
+
+
 function isMainTabActive(): boolean {
   const activeBtn = document.querySelector(
     `${TAB_BAR} button[aria-selected="true"]`
@@ -266,7 +267,7 @@ function isMainTabActive(): boolean {
   );
 }
 
-waitForElem(TAB_BAR).then((tabBar) => {
+waitFor(TAB_BAR).then((tabBar) => {
 
   const update = () => {
     const show = isMainTabActive();

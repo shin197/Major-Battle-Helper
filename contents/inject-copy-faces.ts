@@ -1,5 +1,6 @@
 import type { PlasmoCSConfig } from "plasmo"
 import { showToast } from "./toast"
+import { waitFor } from "~utils/wait-for"
 
 export const config: PlasmoCSConfig = {
   matches: ["https://ccfolia.com/rooms/*"], // 도메인에 맞게 수정
@@ -115,9 +116,9 @@ li.addEventListener("click", async (e) => {
   editLi.click() // 편집 창 열기
 
   /* 2. 편집 다이얼로그 등장 대기 (최대 2초) */
-  const dialog = await waitForElement<HTMLDivElement>(
+  const dialog = await waitFor<HTMLDivElement>(
     'div.MuiDialog-paper[role="dialog"]',   // ← 이 셀렉터로만 기다린다
-    3000                                    // (필요하면 시간 조정)
+    {timeout: 3000}                                    // (필요하면 시간 조정)
   )
   if (!dialog) {
     showToast("❗ 캐릭터 편집 창을 찾지 못했습니다.")
@@ -210,28 +211,5 @@ const faces = rows.map((row) => {
     ul.append(hr, li) // 못 찾으면 맨 끝
   }
 
-  console.log("[MBH] 표정 복사 메뉴 추가")
+  // console.log("[MBH] 표정 복사 메뉴 추가")
 }
-
-async function waitForElement<T extends HTMLElement>(
-  selector: string,
-  timeout = 2000
-): Promise<T | null> {
-  const el = document.querySelector<T>(selector)
-  if (el) return el
-  return new Promise((res) => {
-    const mo = new MutationObserver(() => {
-      const el2 = document.querySelector<T>(selector)
-      if (el2) {
-        mo.disconnect()
-        res(el2)
-      }
-    })
-    mo.observe(document.body, { childList: true, subtree: true })
-    setTimeout(() => {
-      mo.disconnect()
-      res(null)
-    }, timeout)
-  })
-}
-

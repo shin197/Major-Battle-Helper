@@ -12,3 +12,13 @@ chrome.runtime.onMessage.addListener((msg, sender) => {
     chrome.action.setBadgeText({ text: "", tabId: sender.tab?.id })
   }
 })
+
+
+// background.ts
+chrome.runtime.onMessage.addListener((msg, sender) => {
+  if (msg.type === "LOG_CHARS") {
+    chrome.tabs.sendMessage(sender.tab!.id!, { type: "GET_CHARACTERS" }, (chars) => {
+      console.table(chars)
+    })
+  }
+})

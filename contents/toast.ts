@@ -92,3 +92,29 @@ function buildFallback(message: string): HTMLElement {
   wrapper.appendChild(paper)
   return wrapper
 }
+
+
+    // -webkit-text-size-adjust: 100%;
+    // --react-pdf-annotation-layer: 1;
+    // --annotation-unfocused-field-background: url('data:image/svg+xml;charset=utf-8,<svg width="1" height="1" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" style="fill:rgba(0,54,255,.13)"/></svg>');
+    // --input-focus-border-color: Highlight;
+    // --input-focus-outline: 1px solid Canvas;
+    // --input-unfocused-border-color: #0000;
+    // --input-disabled-border-color: #0000;
+    // --input-hover-border-color: #000;
+    // --link-outline: none;
+    // --react-pdf-text-layer: 1;
+    // --highlight-bg-color: #b400aa;
+    // --highlight-selected-bg-color: #006400;
+    // margin: 0;
+    // padding: 0;
+    // z-index: 1400;
+    // position: fixed;
+    // display: flex;
+    // -webkit-box-pack: start;
+    // justify-content: flex-start;
+    // -webkit-box-align: center;
+    // align-items: center;
+    // bottom: 24px;
+    // left: 24px;
+    // right: auto;
