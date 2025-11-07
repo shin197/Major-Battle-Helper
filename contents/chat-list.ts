@@ -1,5 +1,7 @@
 import type { PlasmoCSConfig } from "plasmo"
 
+import { sleep } from "~utils/utils"
+
 export const config: PlasmoCSConfig = {
   matches: ["https://ccfolia.com/rooms/*"],
   run_at: "document_idle"
@@ -11,7 +13,6 @@ const ITEM_SELECTOR = "div[data-index]"
 const PAGE_STEP = 20
 
 // ====== 유틸 ======
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 const raf = () => new Promise((r) => requestAnimationFrame(() => r(null)))
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v))
 

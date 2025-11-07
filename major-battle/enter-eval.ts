@@ -5,7 +5,16 @@ import {
 } from "~contents/character-data"
 import { getCurrentCharacterName } from "~contents/slot-shortcut"
 import { expandDiceVars } from "~major-battle/dice-var-exp"
-import { getCharacterListButton } from "~utils/elements"
+import type { PlasmoCSConfig } from "~node_modules/plasmo/dist/type"
+import { getCharacterListButton, getChatInputBox } from "~utils/elements"
+
+import { initBattle } from "./battle-init"
+
+export const config: PlasmoCSConfig = {
+  matches: ["https://ccfolia.com/rooms/*"], // 도메인에 맞게 수정
+  run_at: "document_idle",
+  all_frames: true // 캔버스가 iframe 안일 때도 주입
+}
 
 type Patch = { label: string; value: string | number }
 
@@ -253,12 +262,13 @@ async function handleCtrlEnter(ev: KeyboardEvent) {
   if (!(ev.ctrlKey && ev.key === "Enter")) return
 
   const ta = ev.target as HTMLElement
+  if (ta != getChatInputBox()) return
   if (!(ta instanceof HTMLTextAreaElement) || !ta.id.startsWith("downshift"))
     return
   // 캐릭터 이름 가져오기
   const charName = getCurrentCharacterName()
 
-  // ① 변환 → ② 값 주입
+  // 메이저배틀에만 필요한 코드
   const expandedVal = expandDiceVars(ta.value, {
     nullSPlaceholder: "?", // S가 없을 때 "?"로
     nullUnitPlaceholder: "-", // unitCount 없으면 "-"
@@ -272,15 +282,18 @@ async function handleCtrlEnter(ev: KeyboardEvent) {
 
   const newVal = transformMessage(expandedVal, dialog) //ta.value
   var finalVal = newVal
-  // setNativeValue(ta, newVal)
-  // // if (newVal !== ta.value) {
-  // // }
 
   if (charName) {
     if (newVal.startsWith("/stat")) {
       applyStatCommandResult(dialog, newVal)
       finalVal = ""
     }
+  }
+
+  // 메이저배틀에만 필요한 커맨드
+  if (newVal.startsWith("/battle")) {
+    initBattle()
+    finalVal = ""
   }
   characterListBtn.click() // 다이얼로그 회수
   setNativeValue(ta, finalVal)

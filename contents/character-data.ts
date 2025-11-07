@@ -172,7 +172,7 @@ export function extractCharacterData(
   return scanned
 }
 
-type Patch = { label: string; value: string | number }
+export type Patch = { label: string; value: string | number }
 type PatchResult = {
   total: number
   applied: string[]

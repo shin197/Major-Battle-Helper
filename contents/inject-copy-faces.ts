@@ -3,7 +3,6 @@ import type { PlasmoCSConfig } from "plasmo"
 import { waitFor } from "~utils/wait-for"
 
 import { extractCharacterData } from "./character-data"
-import type { CharacterData } from "./character-store"
 import { showToast } from "./toast"
 
 export const config: PlasmoCSConfig = {

@@ -1,1 +1,1 @@
-import "../major-battle/index" 
+// import "../major-battle/index"

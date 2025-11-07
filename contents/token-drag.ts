@@ -1,6 +1,8 @@
 // src/contents/cocofolia-bulk-select-drag.v3.3.ts
 import type { PlasmoCSConfig } from "plasmo"
 
+import { sleep } from "~utils/utils"
+
 export const config: PlasmoCSConfig = {
   matches: ["https://ccfolia.com/rooms/*"],
   all_frames: true,
@@ -33,7 +35,6 @@ const DRAGGING_ATTR = "data-bulk-dragging"
 const STYLE_ID = "plasmo-bulk-select-drag-style-v33"
 
 const log = (...a: any[]) => DEBUG && console.log("[bulk-v3.3]", ...a)
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 /** =========================
  *  DOM 유틸
