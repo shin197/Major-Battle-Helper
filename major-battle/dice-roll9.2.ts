@@ -1,32 +1,32 @@
-import { waitFor} from "../utils/wait-for";
+import { waitFor } from "../utils/wait-for"
+import { setLastDiceResult, type DiceResult } from "./dice-result"
 
-const TAB_SCROLLER = "#root div.MuiDrawer-docked form header div.MuiTabs-scroller"
-const TAB_BTN_SEL      = `${TAB_SCROLLER} > div > button[role='tab']`
-const CHAT_LOG_SEL     = "#root div.MuiDrawer-docked > div > ul > div > div"
-const TAB_BAR      = "div.MuiTabs-scroller.MuiTabs-hideScrollbar";
-const MAIN_TAB_ID  = "main";           // 첫 번째 탭의 id(또는 data-value)가 ‘main’
+const TAB_SCROLLER =
+  "#root div.MuiDrawer-docked form header div.MuiTabs-scroller"
+const TAB_BTN_SEL = `${TAB_SCROLLER} > div > button[role='tab']`
+const CHAT_LOG_SEL = "#root div.MuiDrawer-docked > div > ul > div > div"
+const TAB_BAR = "div.MuiTabs-scroller.MuiTabs-hideScrollbar"
+const MAIN_TAB_ID = "main" // 첫 번째 탭의 id(또는 data-value)가 ‘main’
 
 let logObs: MutationObserver | null = null
-
-type DiceResult = {
-  S: number | null              // 필수
-  isCritical: boolean           // 필수
-  unitCount?: number             // 선택: 항상 계산되는 값이 아니라면 ?
-}
 
 const DICE_LINE_REGEX =
   /\(\d+\s*TY\s*\d+\)\s*[＞>]\s*[\d,\s]+?\s*[＞>]\s*(?:\[\d+\]×\d+(?:,\s*)?)+\s*$/u
 
 function handleLine(el: HTMLElement, currentBox: HTMLElement) {
-  if (!isMainTabActive()) return;
-  if (!currentBox.contains(el)) return          // 다른 탭으로 옮겨진 줄 skip
+  if (!isMainTabActive()) return
+  if (!currentBox.contains(el)) return // 다른 탭으로 옮겨진 줄 skip
   if (el.dataset.helper === "dice-marked") return
 
-  const diceNode = el.querySelector("p > span.MuiTypography-root.MuiTypography-body2")
+  const diceNode = el.querySelector(
+    "p > span.MuiTypography-root.MuiTypography-body2"
+  )
 
-  if(!diceNode) return
- 
-  const text = getOwnText(el.querySelector("p > span.MuiTypography-root.MuiTypography-body2")) 
+  if (!diceNode) return
+
+  const text = getOwnText(
+    el.querySelector("p > span.MuiTypography-root.MuiTypography-body2")
+  )
 
   // console.log(text)
 
@@ -34,16 +34,18 @@ function handleLine(el: HTMLElement, currentBox: HTMLElement) {
   if (!DICE_LINE_REGEX.test(text)) return
 
   // const text2 = el.textContent ?? ""
-  const text2 = getOwnText(el.querySelector("p"))+text
+  const text2 = getOwnText(el.querySelector("p")) + text
   // console.log(text2)
   // if (!DICE_LINE_REGEX.test(text)) return
 
-  const diceResult = calcSuccess(text2)   // S 계산 + 대성공 여부 반환하도록 수정
+  const diceResult = calcSuccess(text2) // S 계산 + 대성공 여부 반환하도록 수정
   const color =
-    diceResult.S === 0             ? "#888" :
-    diceResult.isCritical          ? "#29b6f6" : // 파랑
-                          "#fff"      // 흰색
-                          
+    diceResult.S === 0
+      ? "#888"
+      : diceResult.isCritical
+        ? "#29b6f6" // 파랑
+        : "#fff" // 흰색
+
   const badge = document.createElement("span")
   badge.dataset.helper = "dice-result"
   badge.style.cssText = `margin-left:.5em;font-weight:${diceResult.isCritical ? 700 : 400};
@@ -53,6 +55,7 @@ function handleLine(el: HTMLElement, currentBox: HTMLElement) {
   const diceSpan = el.querySelector<HTMLSpanElement>("p > span")
   diceSpan?.insertAdjacentElement("afterend", badge)
   el.dataset.helper = "dice-marked"
+  setLastDiceResult(diceResult)
 }
 
 ;(async () => {
@@ -123,9 +126,9 @@ function handleLine(el: HTMLElement, currentBox: HTMLElement) {
     logObs?.disconnect()
 
     /* 3) 화면에 이미 있는 <li>/<div> 들 먼저 처리 */
-    logBox.querySelectorAll(":scope > *").forEach((n) =>
-      handleLine(n as HTMLElement, logBox)
-    )
+    logBox
+      .querySelectorAll(":scope > *")
+      .forEach((n) => handleLine(n as HTMLElement, logBox))
 
     /* 4) 이후 들어올 노드 감시 */
     logObs = new MutationObserver((records) => {
@@ -137,77 +140,88 @@ function handleLine(el: HTMLElement, currentBox: HTMLElement) {
     })
     logObs.observe(logBox, { childList: true })
   }
-
 })()
-
 
 function calcSuccess(rawLine: string): DiceResult {
   try {
-    const HEAD_REGEX = /(?<cnt>[0-9+\-*/()\s]+)\s*TY\s*(?<size>\d+)[^(【]*(?:\((?<opts>[^)]*)\))?/u;
+    const HEAD_REGEX =
+      /(?<cnt>\(?[0-9+\-*/()\s]+\)?)\s*TY\s*(?<size>\(?[0-9+\-*/()\s]+\)?)[^(【]*(?:\((?<opts>[^)]*)\))?/u
 
     const head = HEAD_REGEX.exec(rawLine)
-    if (!head?.groups) return { S: null, isCritical: false };
+    if (!head?.groups) return { S: null, isCritical: false }
 
-    const tySize = Number(head.groups.size);
+    // console.log(evalArithmetic(head.groups.size))
 
-    const rawOpts = head.groups.opts ?? "";       // 없으면 빈 문자열
+    const tySize = evalArithmetic(head.groups.size)
 
-    const tokens = rawOpts                    // 「+2, !, neg, 특수」 등
+    console.log(tySize)
+
+    const rawOpts = head.groups.opts ?? "" // 없으면 빈 문자열
+
+    const tokens = rawOpts // 「+2, !, neg, 특수」 등
       .split(/[,\s]+/)
       .filter(Boolean)
-      .map(t => t.trim());
+      .map((t) => t.trim())
 
-    const plus   = Number(tokens.find(t => /^\+?\d+$/.test(t))?.replace("+", "") ?? 0);
-    const flags  = tokens.filter(t => !/^\+?\d+$/.test(t));
+    const plus = Number(
+      tokens.find((t) => /^\+?\d+$/.test(t))?.replace("+", "") ?? 0
+    )
+    const flags = tokens.filter((t) => !/^\+?\d+$/.test(t))
 
     const dicePart = rawLine.match(/[＞>]\s*([\d,\s]+?)\s*[＞>]/u)?.[1]
-    
+
     if (!dicePart) return { S: null, isCritical: false }
     const dice = dicePart.split(",").map((d) => Number(d.trim()))
 
-    const hasBang = flags.some((f) => f === "!");
-    const groupified = flags.some((f) => f.startsWith("#"));
+    const hasBang = flags.some((f) => f === "!")
+    const groupified = flags.some((f) => f.startsWith("#"))
     const hasNeg = flags.some((f) => f === "neg")
 
-    // console.log({ dice, tySize, plus, flags });
-    
+    console.log({ dice, tySize, plus, flags })
+
     /* ③ S 계산 */
     let S = 0
-    const tier = tySize <= 4 ? 1
-                : tySize <= 6 ? 2
-                : tySize <= 8 ? 3
-                : tySize <= 10 ? 4
-                : tySize <= 12 ? 5
+    const tier =
+      tySize <= 4
+        ? 1
+        : tySize <= 6
+          ? 2
+          : tySize <= 8
+            ? 3
+            : tySize <= 10
+              ? 4
+              : tySize <= 12
+                ? 5
                 : 6
-    
-    const isMax    = (v: number) => v === tySize
+
+    const isMax = (v: number) => v === tySize
     const maxCount = dice.filter(isMax).length
-    const ones     = dice.filter((d) => d === 1).length
+    const ones = dice.filter((d) => d === 1).length
     let maxS = Infinity
-    const count = Number((flags.find(f => /^#\d+$/.test(f)) ?? "1").slice(1));
+    const count = Number((flags.find((f) => /^#\d+$/.test(f)) ?? "1").slice(1))
     const diceCount = Math.floor(dice.length / count)
-    let unitCount = count;
+    let unitCount = count
 
     // console.log(unitCount)
 
     let minS = Infinity
-    let atLeast4 = 0;
+    let atLeast4 = 0
     for (const v of dice) {
       // 기본 성공치
       let add =
         v >= 20
           ? 6
           : v >= 12
-          ? 5
-          : v >= 10
-          ? 4
-          : v >= 8
-          ? 3
-          : v >= 6
-          ? 2
-          : v >= 4
-          ? 1
-          : 0
+            ? 5
+            : v >= 10
+              ? 4
+              : v >= 8
+                ? 3
+                : v >= 6
+                  ? 2
+                  : v >= 4
+                    ? 1
+                    : 0
 
       /* (+1) : 3의 보너스 */
       if (plus >= 1 && v === 3) add = 1
@@ -215,15 +229,14 @@ function calcSuccess(rawLine: string): DiceResult {
       /* (+2) : 5의 보너스 & ‘1’ 무시 조건① */
       if (plus >= 2 && v === 5) add = 2
 
-      if(!hasNeg){
+      if (!hasNeg) {
         S += add
         atLeast4 += add >= 1 ? 1 : 0
-      }else{
+      } else {
         minS = Math.min(minS, add)
         S = minS
         atLeast4 = S >= 1 ? 1 : 0
       }
-      
     }
 
     const onePenalty =
@@ -231,14 +244,14 @@ function calcSuccess(rawLine: string): DiceResult {
       (plus >= 2 && maxCount === 1 ? 1 : 0) -
       (plus >= 3 && !dice.includes(2) ? 1 : 0)
 
-    if(groupified){
+    if (groupified) {
       // 그룹화 룰
       maxS = Math.max(tier * (count - ones) * diceCount, 0)
       S = Math.min(maxS, S)
       unitCount = Math.max(Math.min(count - ones, atLeast4), 0)
       // console.log(tier, count, diceCount)
       // console.log("maxS: ",maxS)
-    }else{
+    } else {
       /* 1 이 하나라도 && 무시되지 않았다면 S=0 */
       if (onePenalty > 0 && !hasBang) S = 0
 
@@ -246,7 +259,8 @@ function calcSuccess(rawLine: string): DiceResult {
       if (maxCount >= 2 && S > 0 && !hasNeg) S *= maxCount
     }
 
-    return { S,
+    return {
+      S,
       isCritical: maxCount >= 2 && S > 0,
       ...(groupified ? { unitCount } : {})
     }
@@ -255,41 +269,135 @@ function calcSuccess(rawLine: string): DiceResult {
   }
 }
 
-
 function isMainTabActive(): boolean {
   const activeBtn = document.querySelector(
     `${TAB_BAR} button[aria-selected="true"]`
-  ) as HTMLElement | null;
+  ) as HTMLElement | null
 
-  return !!activeBtn && (
-    activeBtn.id === MAIN_TAB_ID ||
-    activeBtn.dataset.value === MAIN_TAB_ID
-  );
+  return (
+    !!activeBtn &&
+    (activeBtn.id === MAIN_TAB_ID || activeBtn.dataset.value === MAIN_TAB_ID)
+  )
 }
 
 waitFor(TAB_BAR).then((tabBar) => {
-
   const update = () => {
-    const show = isMainTabActive();
-    document.querySelectorAll<HTMLElement>(".dice-result")
-      .forEach((b) => b.style.display = show ? "inline" : "none");
-  };
+    const show = isMainTabActive()
+    document
+      .querySelectorAll<HTMLElement>(".dice-result")
+      .forEach((b) => (b.style.display = show ? "inline" : "none"))
+  }
 
   // 처음 한 번
-  update();
+  update()
 
   // aria-selected 변화를 감시
   new MutationObserver(update).observe(tabBar, {
     attributes: true,
     subtree: true,
     attributeFilter: ["aria-selected"]
-  });
-});
+  })
+})
 
 function getOwnText(p: HTMLElement): string {
   return Array.from(p.childNodes)
-    .filter((n) => n.nodeType === Node.TEXT_NODE)   // <span> 제외
+    .filter((n) => n.nodeType === Node.TEXT_NODE) // <span> 제외
     .map((n) => n.textContent ?? "")
     .join("")
     .trim()
+}
+
+function unparen(s: string) {
+  return s.trim().replace(/^\((.*)\)$/, "$1")
+}
+
+export function evalArithmetic(exprRaw: string): number {
+  if (!exprRaw) throw new Error("empty expression")
+  const s = exprRaw.replace(/\s+/g, "")
+  if (!/^[\d.+\-*/()]*$/.test(s)) {
+    throw new Error(`Invalid characters in expression: ${exprRaw}`)
+  }
+
+  let i = 0
+
+  function peek(): string {
+    return s[i] ?? ""
+  }
+  function eat(ch?: string): string {
+    const c = s[i] ?? ""
+    if (ch && c !== ch) throw new Error(`Expected '${ch}' at ${i}, got '${c}'`)
+    i++
+    return c
+  }
+
+  function parseNumber(): number {
+    const start = i
+    // match: digits[.digits] or .digits
+    if (peek() === ".") {
+      i++
+      while (/\d/.test(peek())) i++
+    } else {
+      while (/\d/.test(peek())) i++
+      if (peek() === ".") {
+        i++
+        while (/\d/.test(peek())) i++
+      }
+    }
+    const numStr = s.slice(start, i)
+    if (!numStr) throw new Error(`Number expected at ${start}`)
+    const val = Number(numStr)
+    if (!Number.isFinite(val)) throw new Error(`Invalid number '${numStr}'`)
+    return val
+  }
+
+  // factor := ('+'|'-') factor | number | '(' expr ')'
+  function factor(): number {
+    const c = peek()
+    if (c === "+" || c === "-") {
+      // unary
+      eat()
+      const v = factor()
+      return c === "-" ? -v : v
+    }
+    if (c === "(") {
+      eat("(")
+      const v = expr()
+      if (peek() !== ")") throw new Error(`Missing ')' at ${i}`)
+      eat(")")
+      return v
+    }
+    return parseNumber()
+  }
+
+  // term := factor (('*'|'/') factor)*
+  function term(): number {
+    let v = factor()
+    while (peek() === "*" || peek() === "/") {
+      const op = eat()
+      const r = factor()
+      if (op === "/") {
+        if (r === 0) throw new Error("Division by zero")
+        v = v / r
+      } else {
+        v = v * r
+      }
+    }
+    return v
+  }
+
+  // expr := term (('+'|'-') term)*
+  function expr(): number {
+    let v = term()
+    while (peek() === "+" || peek() === "-") {
+      const op = eat()
+      const r = term()
+      v = op === "+" ? v + r : v - r
+    }
+    return v
+  }
+
+  const out = expr()
+  if (i !== s.length) throw new Error(`Unexpected token '${peek()}' at ${i}`)
+  if (!Number.isFinite(out)) throw new Error("Non-finite result")
+  return out
 }

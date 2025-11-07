@@ -5,12 +5,13 @@
   "description": "CCFolia Major Battle Helper Extension",
   "author": "Skywindragoon",
   "scripts": {
-    "dev":          "plasmo dev",
-    "build":        "plasmo build --env=.env.dev --zip",
+    "dev": "plasmo dev",
+    "build": "plasmo build --env=.env.dev --zip",
     "build:public": "plasmo build --env=.env.public --zip"
   },
   "dependencies": {
     "@plasmohq/storage": "^1.15.0",
+    "lodash": "^4.17.21",
     "plasmo": "0.90.5",
     "react": "18.2.0",
     "react-dom": "18.2.0"
@@ -29,14 +30,19 @@
       "https://ccfolia.com/*"
     ],
     "permissions": [
+      "debugger",
       "storage",
       "activeTab",
       "scripting"
     ],
     "content_scripts": [
       {
-        "matches": ["https://ccfolia.com/*"],
-        "js": ["$MAJOR_BATTLE_SCRIPT"]
+        "matches": [
+          "https://ccfolia.com/*"
+        ],
+        "js": [
+          "$MAJOR_BATTLE_SCRIPT"
+        ]
       }
     ]
   }

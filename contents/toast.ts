@@ -16,30 +16,54 @@ new MutationObserver((muts) => {
   )
 }).observe(document.body, { childList: true, subtree: true })
 
-/* 2. 토스트 호출 함수 */
-export function showToast(msg: string, ms = 3000) {
-  const host = document.querySelector("#root > div") || document.body
+/* 0. 토스트 전용 컨테이너 가져오기/생성 */
+function ensureToastHost(base: HTMLElement): HTMLElement {
+  const id = "plasmo-toast-container"
+  let box = document.getElementById(id) as HTMLElement | null
+  if (!box) {
+    box = document.createElement("div")
+    box.id = id
+    Object.assign(box.style, {
+      position: "fixed",
+      bottom: "24px",
+      left: "24px",
+      zIndex: "1400",
+      display: "flex",
+      flexDirection: "column",
+      gap: "8px"              // 토스트 간 간격
+    } as CSSStyleDeclaration)
+    base.appendChild(box)
+  }
+  return box
+}
 
-  // 2-a) 템플릿이 있으면 그대로 clone → 스타일 100 % 유지
-  let root: HTMLElement
+export function showToast(msg: string, ms = 3000) {
+  /* 👇 base 는 document.body 나 #root > div */
+  // const base = document.querySelector("#root > div") || document.body
+  const base = (
+    document.querySelector<HTMLElement>("#root > div") ??
+    document.body
+  ) as HTMLElement
+  const host = ensureToastHost(base)      // ← 컨테이너 확보
+
+  /* 1. 토스트 DOM 준비 (기존 로직 거의 유지) */
+  let toastRoot: HTMLElement
   if (snackbarTemplate) {
-    root = snackbarTemplate.cloneNode(true) as HTMLElement
-    // message 영역만 교체
-    const msgBox = root.querySelector(
-      ".MuiSnackbarContent-message"
-    ) as HTMLElement
-    if (msgBox) msgBox.textContent = msg
+    toastRoot = snackbarTemplate.cloneNode(true) as HTMLElement
+    toastRoot.querySelector<HTMLElement>(".MuiSnackbarContent-message")!.textContent = msg
   } else {
-    // 2-b) 템플릿 없으면 Fallback 빌드
-    root = buildFallback(msg)
+    toastRoot = buildFallback(msg)        // ✨ buildFallback 그대로 사용
   }
 
-  host.appendChild(root)
-
-  // 등장 애니메이션
-  const paper = root.querySelector(
+  /* 2. 카드(`paper`) 선택 */
+  const paper = toastRoot.querySelector(
     ".MuiSnackbarContent-root, .fallback-paper"
   ) as HTMLElement
+
+  /* 3. 컨테이너 안에 삽입 */
+  host.appendChild(paper)                 // wrapper 대신 paper 자체를 넣어도 OK
+
+  /* 4. 등장·퇴장 애니메이션 */
   paper.style.opacity = "0"
   paper.style.transform = "translateY(100%)"
   requestAnimationFrame(() => {
@@ -47,13 +71,51 @@ export function showToast(msg: string, ms = 3000) {
     paper.style.transform = "none"
   })
 
-  // 자동 퇴장
   setTimeout(() => {
     paper.style.opacity = "0"
     paper.style.transform = "translateY(100%)"
-    setTimeout(() => root.remove(), 225)
+    setTimeout(() => paper.remove(), 225)
   }, ms)
 }
+
+/* 2. 토스트 호출 함수 */
+// export function showToast(msg: string, ms = 3000) {
+//   const host = document.querySelector("#root > div") || document.body
+
+//   // 2-a) 템플릿이 있으면 그대로 clone → 스타일 100 % 유지
+//   let root: HTMLElement
+//   if (snackbarTemplate) {
+//     root = snackbarTemplate.cloneNode(true) as HTMLElement
+//     // message 영역만 교체
+//     const msgBox = root.querySelector(
+//       ".MuiSnackbarContent-message"
+//     ) as HTMLElement
+//     if (msgBox) msgBox.textContent = msg
+//   } else {
+//     // 2-b) 템플릿 없으면 Fallback 빌드
+//     root = buildFallback(msg)
+//   }
+
+//   host.appendChild(root)
+
+//   // 등장 애니메이션
+//   const paper = root.querySelector(
+//     ".MuiSnackbarContent-root, .fallback-paper"
+//   ) as HTMLElement
+//   paper.style.opacity = "0"
+//   paper.style.transform = "translateY(100%)"
+//   requestAnimationFrame(() => {
+//     paper.style.opacity = "1"
+//     paper.style.transform = "none"
+//   })
+
+//   // 자동 퇴장
+//   setTimeout(() => {
+//     paper.style.opacity = "0"
+//     paper.style.transform = "translateY(100%)"
+//     setTimeout(() => root.remove(), 225)
+//   }, ms)
+// }
 
 /* 3. Fallback 생성기 (해시 몰라도 최소한의 스타일 유지) */
 function buildFallback(message: string): HTMLElement {
