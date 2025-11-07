@@ -1,11 +1,11 @@
 import {
   applyStatCommandResult,
   extractCharacterData,
-  getCharacterListButton,
   openCharacterEditDialog
 } from "~contents/character-data"
 import { getCurrentCharacterName } from "~contents/slot-shortcut"
 import { expandDiceVars } from "~major-battle/dice-var-exp"
+import { getCharacterListButton } from "~utils/elements"
 
 type Patch = { label: string; value: string | number }
 

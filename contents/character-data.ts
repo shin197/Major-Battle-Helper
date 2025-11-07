@@ -1,3 +1,4 @@
+import { getCharacterListButton } from "~utils/elements"
 import { toNum } from "~utils/utils"
 import { waitFor } from "~utils/wait-for"
 
@@ -713,6 +714,7 @@ export async function openCharacterEditDialog(
 
   // 다이얼로그(Paper) 대기
   const paper = await waitFor<HTMLElement>(CHARACTER_LIST_SEL)
+  if (!paper) showToast("❗ 캐릭터 목록을 찾지 못했습니다.")
 
   // ul 루트 찾기
   const ul =
@@ -734,7 +736,11 @@ export async function openCharacterEditDialog(
 
   // li 안의 메인 버튼(div[role="button"]) 클릭 → 편집/상세 열림
   const mainBtn = li.querySelector<HTMLElement>('div[role="button"]')
-  if (!mainBtn) showToast(`항목 내 role="button" 요소가 없습니다.`) // throw new Error('항목 내 role="button" 요소가 없습니다.')
+  if (!mainBtn) {
+    showToast(`항목 내 role="button" 요소가 없습니다.`) // throw new Error('항목 내 role="button" 요소가 없습니다.')
+    characterListBtn.click() // 다이얼로그 회수
+    return
+  }
 
   // 실제 클릭 이벤트로 트리거
   mainBtn.dispatchEvent(
@@ -747,6 +753,7 @@ export async function openCharacterEditDialog(
   )
   if (!dialog) {
     showToast("❗ 캐릭터 편집 창을 찾지 못했습니다.")
+    characterListBtn.click() // 다이얼로그 회수
     return
   }
 
@@ -766,12 +773,12 @@ export function applyStatCommandResult(dialog: HTMLDivElement, cmd: string) {
   }
 }
 
-export function getCharacterListButton(): HTMLButtonElement {
-  const CHARACTER_LIST_BTN_SEL =
-    "#root > div > header > div > button:nth-child(3)"
-  const characterListBtn = document.querySelector<HTMLButtonElement>(
-    CHARACTER_LIST_BTN_SEL
-  )
-  if (!characterListBtn) showToast("❗ 캐릭터 목록 버튼을 찾지 못했습니다.") //throw new Error("캐릭터 목록 버튼을 찾지 못했습니다.")
-  return characterListBtn
-}
+// export function getCharacterListButton(): HTMLButtonElement {
+//   const CHARACTER_LIST_BTN_SEL =
+//     "#root > div > header > div > button:nth-child(3)"
+//   const characterListBtn = document.querySelector<HTMLButtonElement>(
+//     CHARACTER_LIST_BTN_SEL
+//   )
+//   if (!characterListBtn) showToast("❗ 캐릭터 목록 버튼을 찾지 못했습니다.") //throw new Error("캐릭터 목록 버튼을 찾지 못했습니다.")
+//   return characterListBtn
+// }

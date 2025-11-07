@@ -1,5 +1,11 @@
 import { Storage } from "@plasmohq/storage"
 
+import {
+  getChatInputBox,
+  getCurrentCharacterChatPaletteEditButton,
+  getCurrentCharacterNameInput
+} from "~utils/elements"
+
 import { showToast } from "./toast"
 
 const CODE2NUM: Record<string, string> = {
@@ -26,28 +32,11 @@ const CODE2NUM: Record<string, string> = {
 }
 
 const storage = new Storage()
-const SLOTS = Array.from({ length: 10 }, (_, i) => `${i}`) // "0"~"9"
-const INPUT_SEL =
-  "#root > div > div.MuiDrawer-root.MuiDrawer-docked> div > div > form > div:nth-child(2) > div > div > input"
-const BTN_SEL =
-  "#root > div > div.MuiDrawer-root.MuiDrawer-docked > div > div > form > div:nth-child(2) > div:nth-child(3) > button"
-const INPUT_SEL2 = 'textarea[id^="downshift"]'
 const NUMS = "0123456789"
 
-function getTarget(): HTMLInputElement | null {
-  return document.querySelector(INPUT_SEL)
-}
-
-function getChatTab(): HTMLTextAreaElement | null {
-  return document.querySelector(INPUT_SEL2)
-}
-function getButtonTarget(): HTMLInputElement | null {
-  return document.querySelector(BTN_SEL)
-}
-
 export function getCurrentCharacterName(): string | null {
-  const el = getTarget()
-  const btn = getButtonTarget()
+  const el = getCurrentCharacterNameInput()
+  const btn = getCurrentCharacterChatPaletteEditButton()
   if (!el) return null
   if (
     btn &&
@@ -61,8 +50,8 @@ export function getCurrentCharacterName(): string | null {
 }
 
 async function saveSlot(idx: string) {
-  const el = getTarget()
-  const btn = getButtonTarget()
+  const el = getCurrentCharacterNameInput()
+  const btn = getCurrentCharacterChatPaletteEditButton()
   if (!el) return
   if (
     btn &&
@@ -80,7 +69,7 @@ async function saveSlot(idx: string) {
 async function loadSlot(idx: string) {
   const val = await storage.get<string>(`slot${idx}`)
   if (val == null) return
-  const el = getTarget()
+  const el = getCurrentCharacterNameInput()
   if (!el) return
   el.value = val
   ;["input", "change"].forEach((t) =>
@@ -100,8 +89,8 @@ document.addEventListener(
     // 타깃 입력란 포커스일 때만 동작
     // console.log(idx);
     if (
-      document.activeElement !== getTarget() &&
-      document.activeElement !== getChatTab()
+      document.activeElement !== getCurrentCharacterNameInput() &&
+      document.activeElement !== getChatInputBox()
     )
       return
 
