@@ -12,7 +12,10 @@ import { waitFor } from "~utils/wait-for"
 const SIDE_CHAR_DIALOG_SEL =
   "body > div.MuiPopover-root > div.MuiPaper-elevation"
 
-export async function initBattle() {
+export async function taskForEachUnit(
+  task: (charData: CharacterData) => Patch[],
+  taskName: string = "작업"
+) {
   const sideCharacterList: HTMLDivElement | null = getSideCharacterListTab()
   if (!sideCharacterList) return
 
@@ -21,7 +24,7 @@ export async function initBattle() {
     sideCharacterList.querySelectorAll<HTMLDivElement>(":scope > div > div")
   )
   if (items.length === 0) {
-    showToast("❗ 표시중인 캐릭터가 없습니다.")
+    showToast("❗ 유닛이 없습니다.")
     return
   }
 
@@ -47,7 +50,7 @@ export async function initBattle() {
         { timeout: 1500 }
       )
       if (!sideCharacterDialog) {
-        showToast("❗ 캐릭터 팝오버를 찾지 못했습니다.")
+        showToast("❗ 유닛 팝오버를 찾지 못했습니다.")
         continue
       }
 
@@ -60,7 +63,7 @@ export async function initBattle() {
           "button, [role='button']"
         )
       if (!firstBtn) {
-        showToast("❗ 캐릭터 편집 버튼을 찾지 못했습니다.")
+        showToast("❗ 유닛 편집 버튼을 찾지 못했습니다.")
         continue
       }
       firstBtn.click()
@@ -71,7 +74,7 @@ export async function initBattle() {
         { timeout: 2000 }
       )
       if (!characterEditDialog) {
-        showToast("❗ 캐릭터 편집 창을 찾지 못했습니다.")
+        showToast("❗ 유닛 편집 창을 찾지 못했습니다.")
         continue
       }
 
@@ -81,36 +84,8 @@ export async function initBattle() {
         false
       )
 
-      // ----- 패치 목록 작성 -----
-      const patches: Patch[] = []
-      const getParamNum = (label: string, fallback = 0) => {
-        const v =
-          charData.params.find((p) => p.label === label)?.value ?? `${fallback}`
-        const n = Number(v)
-        return Number.isFinite(n) ? n : fallback
-      }
-      const hasStatus = (label: string) =>
-        charData.status.some((s) => s.label === label)
-
-      if (hasStatus("MP"))
-        patches.push({ label: "MP", value: getParamNum("초기마력", 0) })
-      if (hasStatus("DEF"))
-        patches.push({ label: "DEF", value: getParamNum("초기방어도", 0) })
-      if (hasStatus("BLD"))
-        patches.push({ label: "BLD", value: getParamNum("초기선혈", 0) })
-      if (hasStatus("STK"))
-        patches.push({ label: "STK", value: getParamNum("초기스택", 0) })
-      if (hasStatus("INF"))
-        patches.push({ label: "INF", value: getParamNum("초기들끓음", 0) })
-      if (hasStatus("AP"))
-        patches.push({ label: "AP", value: getParamNum("초기행동력", 0) })
-      if (hasStatus("PWR"))
-        patches.push({ label: "PWR", value: getParamNum("초기파워", 0) })
-      if (hasStatus("RWD"))
-        patches.push({ label: "RWD", value: getParamNum("초기되감기", 0) })
-
       // 적용 (다이얼로그는 지금 회수)
-      applyCharacterPatches(characterEditDialog, patches, true)
+      applyCharacterPatches(characterEditDialog, task(charData), true)
 
       // 다이얼로그 닫힘 대기 (최대 2초)
       const t0 = performance.now()
@@ -124,12 +99,77 @@ export async function initBattle() {
       }
     } catch (e) {
       console.error(e)
-      showToast("⚠️ 캐릭터 초기화 중 오류가 발생했습니다.")
+      showToast(`⚠️ 유닛의 ${taskName} 도중 오류가 발생했습니다.`)
       // 다음 아이템으로 진행
     }
   }
 
-  showToast("✅ 전 캐릭터 초기화가 완료되었습니다.")
+  showToast(`✅ 전 유닛 ${taskName} 완료되었습니다.`)
+}
+
+export async function initBattle() {
+  taskForEachUnit((charData: CharacterData) => {
+    const patches: Patch[] = []
+    const getParamNum = (label: string, fallback = 0) => {
+      const v =
+        charData.params.find((p) => p.label === label)?.value ?? `${fallback}`
+      const n = Number(v)
+      return Number.isFinite(n) ? n : fallback
+    }
+    const hasStatus = (label: string) =>
+      charData.status.some((s) => s.label === label)
+
+    if (hasStatus("MP"))
+      patches.push({ label: "MP", value: getParamNum("초기마력", 0) })
+    if (hasStatus("DEF"))
+      patches.push({ label: "DEF", value: getParamNum("초기방어도", 0) })
+    if (hasStatus("BLD"))
+      patches.push({ label: "BLD", value: getParamNum("초기선혈", 0) })
+    if (hasStatus("STK"))
+      patches.push({ label: "STK", value: getParamNum("초기스택", 0) })
+    if (hasStatus("INF"))
+      patches.push({ label: "INF", value: getParamNum("초기들끓음", 0) })
+    if (hasStatus("AP"))
+      patches.push({ label: "AP", value: getParamNum("초기행동력", 0) })
+    if (hasStatus("PWR"))
+      patches.push({ label: "PWR", value: getParamNum("초기파워", 0) })
+    if (hasStatus("RWD"))
+      patches.push({ label: "RWD", value: getParamNum("초기되감기", 0) })
+    return patches
+  }, "초기화")
+}
+
+export async function capStatus() {
+  taskForEachUnit((charData: CharacterData) => {
+    const patches: Patch[] = []
+    const getMaxStatus = (label: string, fallback = 0) => {
+      const target = charData.status.find((p) => p.label === label)
+      const v = target?.max ?? target?.cur ?? `${fallback}`
+      const n = Number(v)
+      return Number.isFinite(n) ? n : fallback
+    }
+    const hasStatus = (label: string) =>
+      charData.status.some((s) => s.label === label)
+
+    charData.status.forEach((stat) => {
+      const label = stat.label
+      if (label === "HP" && hasStatus("#")) {
+        const groupSize = charData.status.find((p) => p.label === "#")
+        const groupMaxHP = groupSize.cur * stat.max
+        if (stat.cur > groupMaxHP)
+          patches.push({ label: "HP", value: groupMaxHP })
+        if (Math.ceil(stat.cur / stat.max) < groupSize.cur)
+          patches.push({ label: "#", value: Math.ceil(stat.cur / stat.max) })
+        return
+      }
+      if (label === "#") {
+        return
+      }
+      if (stat.cur > stat.max)
+        patches.push({ label, value: getMaxStatus(label, stat.cur) })
+    })
+    return patches
+  }, "상한제한")
 }
 
 // Esc 발송(포커스 대상 & 팝오버 컨테이너 모두에 시도)

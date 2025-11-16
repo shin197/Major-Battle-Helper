@@ -8,7 +8,7 @@ import { expandDiceVars } from "~major-battle/dice-var-exp"
 import type { PlasmoCSConfig } from "~node_modules/plasmo/dist/type"
 import { getCharacterListButton, getChatInputBox } from "~utils/elements"
 
-import { initBattle } from "./battle-init"
+import { capStatus, initBattle } from "./battle-init"
 
 export const config: PlasmoCSConfig = {
   matches: ["https://ccfolia.com/rooms/*"], // 도메인에 맞게 수정
@@ -278,7 +278,8 @@ async function handleCtrlEnter(ev: KeyboardEvent) {
 
   const characterListBtn = getCharacterListButton()
 
-  const dialog = await openCharacterEditDialog(charName)
+  const { dialog, buttonUsed } =
+    await openCharacterEditDialog<HTMLDivElement>(charName)
 
   const newVal = transformMessage(expandedVal, dialog) //ta.value
   var finalVal = newVal
@@ -295,7 +296,11 @@ async function handleCtrlEnter(ev: KeyboardEvent) {
     initBattle()
     finalVal = ""
   }
-  characterListBtn.click() // 다이얼로그 회수
+  if (newVal.startsWith("/cap")) {
+    capStatus()
+    finalVal = ""
+  }
+  if (buttonUsed) characterListBtn.click() // 다이얼로그 회수
   setNativeValue(ta, finalVal)
 }
 

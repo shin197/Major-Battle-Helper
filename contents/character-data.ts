@@ -1,6 +1,11 @@
 import { getCharacterListButton } from "~utils/elements"
 import { toNum } from "~utils/utils"
-import { waitFor } from "~utils/wait-for"
+import {
+  waitFor,
+  waitForDialogByTitle,
+  waitForDialogByTitleWithButton,
+  type DialogWaitResult
+} from "~utils/wait-for"
 
 import type { CharacterData } from "./character-store"
 import { makeCharacterIdFromName, store } from "./character-store"
@@ -682,11 +687,10 @@ export async function openCharacterEditDialogRead(
 ): Promise<CharacterData> {
   const characterListBtn = getCharacterListButton()
 
-  const dialog = await openCharacterEditDialog(search)
+  const { dialog, buttonUsed } = await openCharacterEditDialog(search)
 
   const characterData = extractCharacterData(dialog, true)
-
-  characterListBtn.click() // 다이얼로그 회수
+  if (buttonUsed) characterListBtn.click() // 다이얼로그 회수
 
   return characterData
 }
@@ -697,48 +701,58 @@ export async function openCharacterEditDialogWrite(
 ) {
   const characterListBtn = getCharacterListButton()
 
-  const dialog = await openCharacterEditDialog(search)
+  const { dialog, buttonUsed } = await openCharacterEditDialog(search)
 
   applyStatCommandResult(dialog, cmd)
 
-  characterListBtn.click() // 다이얼로그 회수
+  if (buttonUsed) characterListBtn.click() // 다이얼로그 회수
 }
 
-export async function openCharacterEditDialog(
-  search?: string
-): Promise<HTMLDivElement> {
+export async function openCharacterEditDialog<
+  T extends HTMLDivElement = HTMLDivElement
+>(search?: string): Promise<DialogWaitResult<T>> {
+  //Promise<HTMLDivElement>
   const characterListBtn = getCharacterListButton()
-  characterListBtn.click()
 
-  const CHARACTER_LIST_SEL = "body > div:nth-child(3) > div > div.MuiPaper-root"
+  const characterListResult = await waitForDialogByTitleWithButton(
+    "내 캐릭터 목록",
+    characterListBtn
+  )
+  const paper = characterListResult.dialog
+  const buttonUsed = characterListResult.buttonUsed
 
-  // 다이얼로그(Paper) 대기
-  const paper = await waitFor<HTMLElement>(CHARACTER_LIST_SEL)
-  if (!paper) showToast("❗ 캐릭터 목록을 찾지 못했습니다.")
+  // const onClose = () => {}
+  function onErrorClose(message: string) {
+    showToast(message)
+    if (buttonUsed) {
+      characterListBtn.click() // 다이얼로그 회수
+    }
+  }
+
+  if (!paper) {
+    showToast("❗ '내 캐릭터 목록' 다이얼로그를 찾지 못했습니다.")
+  }
 
   // ul 루트 찾기
   const ul =
     paper.querySelector<HTMLElement>("ul.MuiList-root") ??
     paper.querySelector("ul")
   if (!ul) {
-    showToast("❗ 캐릭터 목록 <ul>을 찾지 못했습니다.") //throw new Error("캐릭터 목록 <ul>을 찾지 못했습니다.")
-    characterListBtn.click() // 다이얼로그 회수
+    onErrorClose("❗ 캐릭터 목록 <ul>을 찾지 못했습니다.")
     return
   }
 
   // 이름으로 li 선택
   const li = pickItemByName(ul, search)
   if (!li) {
-    showToast(`"${search}"에 해당하는 캐릭터를 찾지 못했습니다.`)
-    characterListBtn.click() // 다이얼로그 회수
+    onErrorClose(`"${search}"에 해당하는 캐릭터를 찾지 못했습니다.`)
     return
-  } // throw new Error(`"${search}"에 해당하는 캐릭터를 찾지 못했습니다.`)
+  }
 
   // li 안의 메인 버튼(div[role="button"]) 클릭 → 편집/상세 열림
   const mainBtn = li.querySelector<HTMLElement>('div[role="button"]')
   if (!mainBtn) {
-    showToast(`항목 내 role="button" 요소가 없습니다.`) // throw new Error('항목 내 role="button" 요소가 없습니다.')
-    characterListBtn.click() // 다이얼로그 회수
+    onErrorClose(`항목 내 role="button" 요소가 없습니다.`)
     return
   }
 
@@ -752,12 +766,10 @@ export async function openCharacterEditDialog(
     { timeout: 1000 } // (필요하면 시간 조정)
   )
   if (!dialog) {
-    showToast("❗ 캐릭터 편집 창을 찾지 못했습니다.")
-    characterListBtn.click() // 다이얼로그 회수
-    return
+    onErrorClose("❗ 캐릭터 편집 창을 찾지 못했습니다.")
   }
 
-  return dialog
+  return { dialog: dialog as T, buttonUsed }
 }
 
 export function applyStatCommandResult(dialog: HTMLDivElement, cmd: string) {
