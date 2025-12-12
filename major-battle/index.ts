@@ -1,4 +1,4 @@
-import "./dice-roll10.0"
+import "./dice-roll13.0"
 import "./some-script"
 import "./dice-result"
 import "./dice-var-exp"
