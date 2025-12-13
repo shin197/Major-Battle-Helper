@@ -186,9 +186,11 @@ function calcSuccess(rawLine: string): DiceResult {
     )
     const hasDC = flags.some((f) => f.startsWith("DC="))
     const DC = Number((flags.find((f) => /^DC=\d+$/.test(f)) ?? "1").slice(3))
-    const level = Number((flags.find((f) => /^Lv\d+$/.test(f)) ?? "1").slice(2))
+    const level = Number(
+      (flags.find((f) => /^Lv[-]?\d+$/.test(f)) ?? "1").slice(2)
+    )
 
-    console.log({ dice, tySize, plus, flags })
+    console.log({ dice, tySize, plus, level, flags })
 
     /* ③ S 계산 */
     let S = 0
