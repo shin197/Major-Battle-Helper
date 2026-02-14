@@ -172,7 +172,7 @@ export function extractCharacterData(
   })
 
   const rec = store.getByName(name).data
-  console.log(rec)
+  console.info(rec)
 
   return scanned
 }

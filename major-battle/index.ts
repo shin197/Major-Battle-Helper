@@ -4,4 +4,4 @@ import "./dice-result"
 import "./dice-var-exp"
 import "./enter-eval"
 
-console.log("Major Battle Script Loaded")
+console.info("Major Battle Script Loaded")

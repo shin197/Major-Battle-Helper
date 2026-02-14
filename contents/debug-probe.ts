@@ -5,7 +5,7 @@ export const config: PlasmoCSConfig = {
   run_at: "document_idle"
 }
 
-console.log("%c[MBH] content script loaded", "color: #4caf50")
+console.info("%cContent script loaded", "color: #4caf50")
 
 // // ① 툴바 뱃지
 // chrome.action.setBadgeBackgroundColor({ color: "#4caf50" })
@@ -14,6 +14,6 @@ console.log("%c[MBH] content script loaded", "color: #4caf50")
 // contents/debug-probe.ts
 chrome.runtime.sendMessage({
   type: "SET_BADGE",
-  text: "ON",          // 배지 글자
-  bg: "#4caf50"    // 배경색 바꾸고 싶다면 옵션으로
+  text: "ON", // 배지 글자
+  bg: "#4caf50" // 배경색 바꾸고 싶다면 옵션으로
 })

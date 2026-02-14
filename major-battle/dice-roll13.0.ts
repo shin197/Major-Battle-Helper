@@ -54,7 +54,7 @@ function handleLine(el: HTMLElement, currentBox: HTMLElement) {
   badge.dataset.helper = "dice-result"
   badge.style.cssText = `margin-left:.5em;font-weight:${diceResult.crit !== 0 && diceResult.crit !== 1 ? 700 : 400};
                        color:${color}`
-  badge.textContent = `\u{1F3B2}S=${diceResult.S}${diceResult.unitCount != null ? ` #️⃣${diceResult.unitCount}` : ""}` // \u{1F3B2} == 🎲
+  badge.textContent = `\u{1F3B2}S=${diceResult.S}${diceResult.unitCount != null ? ` #️⃣${diceResult.unitCount}${diceResult.critCount ? ` ✪${diceResult.critCount}` : ""}` : ""}` // \u{1F3B2} == 🎲
   if (diceResult.passDC != null) {
     badge.textContent += ` ${successText}`
   }
@@ -190,26 +190,12 @@ function calcSuccess(rawLine: string): DiceResult {
       (flags.find((f) => /^Lv[-]?\d+$/.test(f)) ?? "1").slice(2)
     )
 
-    console.log({ dice, tySize, plus, level, flags })
-
-    /* ③ S 계산 */
     let S = 0
-    // const tier =
-    //   tySize <= 4
-    //     ? 1
-    //     : tySize <= 6
-    //       ? 2
-    //       : tySize <= 8
-    //         ? 3
-    //         : tySize <= 10
-    //           ? 4
-    //           : tySize <= 12
-    //             ? 5
-    //             : 6
 
     let unitCount = count
     let crit = 0
     let passDC = true
+    let critCount = 0
 
     for (var i = 0; i < count; i++) {
       const primaryDie = dice[i] ?? 0
@@ -218,12 +204,17 @@ function calcSuccess(rawLine: string): DiceResult {
       crit = 0
       let exS = 0
       let exFail = false
+      let bonusHit = false
       for (let j = 0; j < exDiceCount; j++) {
         const num = dice[count + 1 + j]
-        if (num === 1) {
+        if (num === 1 || secondaryDie == 1) {
           exFail = true
         } else {
           exS += num
+          if (num === tySize) {
+            S += plus
+            bonusHit = true
+          }
         }
       }
       if (primaryDie == 1 || exFail) {
@@ -239,16 +230,18 @@ function calcSuccess(rawLine: string): DiceResult {
       } else {
         S += primaryDie + secondaryDie + exS
         crit = 2
+        critCount += 1
       }
       if (secondaryDie === tySize) {
         S += plus
-        if (crit === 2 && secondaryDie === tySize) {
-          crit = 3
-        }
+        bonusHit = true
       }
       if (hasDC && S < DC) {
         passDC = false
         crit = 0
+      }
+      if (crit === 2 && bonusHit) {
+        crit = 3
       }
     }
 
@@ -264,7 +257,8 @@ function calcSuccess(rawLine: string): DiceResult {
       S,
       crit,
       ...(groupified ? { unitCount } : {}),
-      ...(hasDC ? { passDC } : {})
+      ...(hasDC ? { passDC } : {}),
+      ...(critCount > 0 ? { critCount } : {})
     }
   } catch {
     return { S: null, crit: 0 }

@@ -3,6 +3,7 @@ export type DiceResult = {
   crit: number // 필수
   unitCount?: number // 선택
   passDC?: boolean // 선택
+  critCount?: number
 }
 
 const KEY = "ccf:lastDiceResult"
