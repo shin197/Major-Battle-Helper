@@ -74,9 +74,9 @@ export function expandDiceVars(
 
     // isCritical
     if (opt.criticalAsNumber) {
-      critStr = last.isCritical ? "1" : "0"
+      critStr = last.crit ? "1" : "0"
     } else {
-      critStr = String(last.isCritical)
+      critStr = String(last.crit)
     }
   }
 

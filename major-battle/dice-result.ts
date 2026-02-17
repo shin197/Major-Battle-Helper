@@ -38,7 +38,8 @@ export function setLastDiceResult(res: DiceResult) {
     S: res.S ?? null,
     crit: res.crit,
     unitCount: typeof res.unitCount === "number" ? res.unitCount : undefined,
-    passDC: typeof res.passDC === "boolean" ? res.passDC : undefined
+    passDC: typeof res.passDC === "boolean" ? res.passDC : undefined,
+    critCount: typeof res.critCount === "number" ? res.critCount : undefined,
   }
   save(safe)
 }
