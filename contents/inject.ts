@@ -329,37 +329,77 @@ function initCCfoliaAPI() {
         return char
     }
   }
+  installCcfoliaRpcBridge()
 
   console.log("%c[CCFOLIA-API] 인젝트 완료")
 
 // --- 7. 테스트 코드 (요청하신 부분) ---
   // 페이지 로드 3초 후 실행됩니다.
-  setTimeout(async () => {
-    console.log("[CCFOLIA-API] 10초 경과: 테스트 자동 실행 시도...")
+  // setTimeout(async () => {
+  //   console.log("[CCFOLIA-API] 10초 경과: 테스트 자동 실행 시도...")
     
-    // ★ 여기에 테스트하고 싶은 캐릭터 이름을 적으세요
-    const targetName = "크시카" 
+  //   // ★ 여기에 테스트하고 싶은 캐릭터 이름을 적으세요
+  //   const targetName = "크시카" 
     
-    try {
-        const char = window.ccfoliaAPI.getChar(targetName)
-        if (char) {
-            console.log(`[TEST] 타겟 발견: ${char.name}`)
+  //   try {
+  //       const char = window.ccfoliaAPI.getChar(targetName)
+  //       if (char) {
+  //           console.log(`[TEST] 타겟 발견: ${char.name}`)
             
-            // 예시: HP를 1 깎습니다.
-            // await window.ccfoliaAPI.setStatus(targetName, "HP", -1)
+  //           // 예시: HP를 1 깎습니다.
+  //           // await window.ccfoliaAPI.setStatus(targetName, "HP", -1)
             
-            // 예시: 투명화를 토글해봅니다. (필요없으면 주석처리)
-            // await window.ccfoliaAPI.toggleProp(targetName, "invisible")
+  //           // 예시: 투명화를 토글해봅니다. (필요없으면 주석처리)
+  //           // await window.ccfoliaAPI.toggleProp(targetName, "invisible")
             
-            console.log("[TEST] 테스트 동작 완료!")
-        } else {
-            console.warn(`[TEST] 이름에 '${targetName}'가 포함된 캐릭터를 찾지 못했습니다.`)
-        }
-    } catch (e) {
-        console.error("[TEST] 테스트 중 에러 발생:", e)
-    }
-  }, 10000)
+  //           console.log("[TEST] 테스트 동작 완료!")
+  //       } else {
+  //           console.warn(`[TEST] 이름에 '${targetName}'가 포함된 캐릭터를 찾지 못했습니다.`)
+  //       }
+  //   } catch (e) {
+  //       console.error("[TEST] 테스트 중 에러 발생:", e)
+  //   }
+  // }, 10000)
 }
 
 // 실행
 initCCfoliaAPI()
+
+type CcReq =
+  | { id: string; type: "ccfolia:call"; method: "updateCharacterHP"; args: [string, number] }
+  | { id: string; type: "ccfolia:call"; method: "debug"; args: [] }
+
+type CcRes =
+  | { id: string; type: "ccfolia:result"; ok: true; value: any }
+  | { id: string; type: "ccfolia:result"; ok: false; error: string }
+
+function installCcfoliaRpcBridge() {
+  window.addEventListener("message", async (ev) => {
+    // 같은 window에서 온 메시지만 처리 (iframe 등 차단)
+    if (ev.source !== window) return
+    const data = ev.data as CcReq
+    if (!data || data.type !== "ccfolia:call" || !data.id) return
+
+    const reply = (res: CcRes) => window.postMessage(res, "*")
+
+    try {
+      const api = (window as any).ccfoliaAPI
+      if (!api) throw new Error("ccfoliaAPI not ready")
+
+      const fn = api[data.method]
+      if (typeof fn !== "function") throw new Error(`Unknown method: ${data.method}`)
+
+      const value = await fn(...(data.args as any))
+      reply({ id: data.id, type: "ccfolia:result", ok: true, value })
+    } catch (e: any) {
+      reply({
+        id: data.id,
+        type: "ccfolia:result",
+        ok: false,
+        error: String(e?.message ?? e)
+      })
+    }
+  })
+
+  console.log("ccfolia RPC bridge installed")
+}
