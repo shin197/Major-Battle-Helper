@@ -34,7 +34,10 @@ function callCcfolia<T = any>(method: string, ...args: any[]): Promise<T> {
 
 setTimeout(() => {
     // callCcfolia("setStatus", "크시카", "HP", 1);
-    callCcfolia("inspect", "크시카");
+    // callCcfolia("inspect", "크시카");
+    callCcfolia("getCharacters", "all").then(chars => {
+      console.log("Characters:", chars);
+    });
 }, 5000)
 // 사용 예시
 
