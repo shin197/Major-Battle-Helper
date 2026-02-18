@@ -1,4 +1,4 @@
-import "~/major-battle/index"
+// import "~/major-battle/index"
 
 // // if (process.env.PLASMO_PUBLIC_MAJOR_BATTLE === 'true') {
 // //   console.log("비공개 빌드 확인: major-battle 스크립트를 로드합니다.");

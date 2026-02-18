@@ -3,7 +3,7 @@ import { expandDiceVars } from "~major-battle/dice-var-exp"
 import type { PlasmoCSConfig } from "~node_modules/plasmo/dist/type"
 import { getChatInputBox } from "~utils/elements"
 import { callCcfolia } from "~contents/ccfolia-api"
-import { initBattle } from "./battle-init"
+import { capStatus, initBattle } from "./battle-init"
 import { evaluateMath } from "~utils/eval-math"
 
 export const config: PlasmoCSConfig = {
@@ -168,11 +168,11 @@ export async function handleCtrlEnter(ev: KeyboardEvent) {
 
     if (!character) {
       console.warn(`[Major Battle Helper] Character not found: ${charName}`)
-      // return
     }
 
     // 2. 주사위 변수 확장 (S, U 등)
-    const expandedVal = expandDiceVars(ta.value, {
+    let expandedVal = ta.value
+      expandedVal = expandDiceVars(ta.value, {
       nullSPlaceholder: "?",
       nullUnitPlaceholder: "-",
       criticalAsNumber: true
@@ -190,19 +190,26 @@ export async function handleCtrlEnter(ev: KeyboardEvent) {
     // 5. /battle 명령어 실행
     if (finalVal.startsWith("/battle")) {
       initBattle()
+      finalVal = ""
     }
-
+    if (finalVal.startsWith("/cap")) {
+      capStatus()
+      finalVal = ""
+    }
     // 6. 결과 반영
     if (finalVal !== ta.value) {
       setNativeValue(ta, finalVal)
     }
 
   } catch (err) {
-    console.error("[Major Battle Helper] handleCtrlEnter Error:", err)
+    // console.error("[Major Battle Helper] handleCtrlEnter Error:", err)
   }
 }
 
 /** -----------------------------------------------
  *  3. 한 번만 전역 리스너 등록
  * ----------------------------------------------*/
-document.addEventListener("keydown", handleCtrlEnter, true)
+if(process.env.PLASMO_PUBLIC_ENABLE_MAJOR_BATTLE === 'true'){
+  document.addEventListener("keydown", handleCtrlEnter, true)
+  console.log("HANDLE CTRL+ENTER REGISTERED MAJOR BATTLE")
+}
