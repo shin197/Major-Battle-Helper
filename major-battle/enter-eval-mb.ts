@@ -57,7 +57,7 @@ export async function handleCtrlEnter(ev: KeyboardEvent) {
       finalVal = ""
     }
     if (finalVal.startsWith("/cap")) {
-      capStatus()
+      capStatus(["HP","MP","DEF","AP","EX","STK"])
       finalVal = ""
     }
     // 6. 결과 반영

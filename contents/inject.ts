@@ -260,7 +260,7 @@ function initCCfoliaAPI() {
 
   window.ccfoliaAPI = {
     
-    getCharacters: (filterType: 'all' | 'active' | 'mine' = 'all'): CcfoliaCharacter[] => {
+    getCharacters: (filterType: 'all' | 'active' | 'mine' | 'status' = 'all'): CcfoliaCharacter[] => {
       const { store, selectors, rc } = getServices()
       const state = store.getState()
 
@@ -269,6 +269,7 @@ function initCCfoliaAPI() {
         let ids: string[] = []
         if (filterType === 'active') ids = selectors.getRoomActiveCharacterIds(state)
         else if (filterType === 'mine') ids = selectors.getMyRoomCharacterIds(state)
+        else if (filterType === 'status') ids = selectors.getRoomShowStatusCharacterIds(state)
         else ids = selectors.getRoomCharacterIds(state) // all
         return ids.map(id => rc.entities[id]).filter(Boolean)
       } 
