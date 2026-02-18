@@ -4,6 +4,7 @@ import { getChatInputBox } from "~utils/elements"
 import { callCcfolia } from "~contents/ccfolia-api"
 import { evaluateMath } from "~utils/eval-math"
 import { setNativeValue } from "~utils/utils"
+import { showToast } from "./toast"
 
 export const config: PlasmoCSConfig = {
   matches: ["https://ccfolia.com/rooms/*"],
@@ -176,9 +177,10 @@ export async function handleStatCommand(character: CcfoliaCharacter, commandLine
         status: hasStatusUpdates ? statusUpdates : undefined,
         params: hasParamUpdates ? paramUpdates : undefined
       })
-      console.info(`[BattleHelper] Batch Update applied for ${character.name}`, { statusUpdates, paramUpdates })
+      showToast(`✅ 캐릭터: ${character.name} 의 업데이트가 완료되었습니다.`)
+      // console.info(`[BattleHelper] Batch Update applied for ${character.name}`, { statusUpdates, paramUpdates })
     } catch (e) {
-      console.error("[BattleHelper] patchCharacter failed:", e)
+      showToast("❌ 캐릭터 업데이트에 실패했습니다.")
     }
   }
 }
@@ -200,7 +202,8 @@ export async function handleCtrlEnter(ev: KeyboardEvent) {
     const character = await callCcfolia<CcfoliaCharacter>("getChar", charName)
 
     if (!character) {
-      console.warn(`[Major Battle Helper] Character not found: ${charName}`)
+      showToast(`❗ 캐릭터: ${charName} 를 찾을 수 없습니다.`)
+      // console.warn(`[Major Battle Helper] Character not found: ${charName}`)
     }
 
     // 3. 메시지 변환 (Status/Params 치환 + 수식 계산)

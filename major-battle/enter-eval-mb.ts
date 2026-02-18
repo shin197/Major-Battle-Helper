@@ -3,9 +3,10 @@ import { expandDiceVars } from "~major-battle/dice-var-exp"
 import type { PlasmoCSConfig } from "~node_modules/plasmo/dist/type"
 import { getChatInputBox } from "~utils/elements"
 import { callCcfolia } from "~contents/ccfolia-api"
-import { capStatus, initBattle } from "./battle-init"
+import { capStatus, handleDmgCommand, initBattle } from "./battle-init"
 import { handleStatCommand, transformMessage, type CcfoliaCharacter } from "~contents/enter-eval"
 import { setNativeValue } from "~utils/utils"
+import { showToast } from "~contents/toast"
 
 export const config: PlasmoCSConfig = {
   matches: ["https://ccfolia.com/rooms/*"],
@@ -59,6 +60,15 @@ export async function handleCtrlEnter(ev: KeyboardEvent) {
     if (finalVal.startsWith("/cap")) {
       capStatus(["HP","MP","DEF","AP","EX","STK"])
       finalVal = ""
+    }
+    if (finalVal.startsWith("/dmg")) {
+      if (character) {
+        await handleDmgCommand(character, finalVal)
+        finalVal = ""
+      } else {
+        // console.warn("[BattleHelper] Cannot use /dmg without a character.")
+        showToast(`❗ 캐릭터 없이는 /dmg 명령어를 사용할 수 없습니다.`)
+      }
     }
     // 6. 결과 반영
     if (finalVal !== ta.value) {
