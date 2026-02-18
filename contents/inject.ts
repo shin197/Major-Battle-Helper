@@ -360,9 +360,9 @@ function initCCfoliaAPI() {
      * 캐릭터의 특정 스테이터스(HP, MP, SAN 등) 값 변경
      * - namePart: 캐릭터 이름
      * - labelPart: 스테이터스 라벨 (예: "HP", "정신력")
-     * - valueDiff: 더할 값 (음수면 뺌)
+     * - value: 설정할 값
      */
-    setStatus: async (namePart: string, labelPart: string, valueDiff: number) => {
+    setStatus: async (namePart: string, labelPart: string, value: number) => {
       const { fsTools, db, roomId, rc } = getServices()
       const { setDoc, doc, collection } = fsTools
       
@@ -372,7 +372,7 @@ function initCCfoliaAPI() {
       const newStatus = target.status.map(s => {
         if (s.label.includes(labelPart)) {
             // 최대값/최소값 보정 (선택사항)
-            let val = s.value + valueDiff
+            let val = value
             // if (val < 0) val = 0 
             // if (val > s.max) val = s.max
             return { ...s, value: val }
@@ -382,7 +382,7 @@ function initCCfoliaAPI() {
 
       const targetRef = doc(collection(db, "rooms", roomId, "characters"), target._id)
       await setDoc(targetRef, { status: newStatus, updatedAt: Date.now() }, { merge: true })
-      console.log(`[API] ${target.name}: ${labelPart} ${valueDiff > 0 ? '+' : ''}${valueDiff}`)
+      console.log(`[API] ${target.name}: ${labelPart} -> ${value}`)
     },
 
     /**
