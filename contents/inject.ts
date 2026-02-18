@@ -444,7 +444,63 @@ function initCCfoliaAPI() {
         console.log(`[API] ${target.name}: 명령어 수정 완료`)
     },
 
-/**
+    patchCharacter: async (
+      namePart: string, 
+      updates: { 
+        status?: Record<string, number>, 
+        params?: Record<string, string> 
+      }
+    ) => {
+      const { fsTools, db, roomId } = getServices()
+      const { setDoc, doc, collection } = fsTools
+
+      // 1. 캐릭터 찾기
+      const target = window.ccfoliaAPI.getChar(namePart)
+      if (!target) throw new Error(`캐릭터 '${namePart}'를 찾을 수 없습니다.`)
+
+      const updatePayload: any = { updatedAt: Date.now() }
+      let hasChanges = false
+
+      // 2. Status 업데이트 처리
+      if (updates.status) {
+        const newStatus = target.status.map((s: any) => {
+          // updates.status 키 중에 s.label을 포함하는 것이 있는지 확인
+          // (정확히 일치하는 것을 우선하고, 없으면 포함하는 것을 찾음 - 기존 로직 유지)
+          
+          // 정확한 일치 우선 검색
+          if (updates.status![s.label] !== undefined) {
+             hasChanges = true
+             let val = updates.status![s.label]
+             // val = Math.max(0, Math.min(val, s.max)) // 필요 시 주석 해제 (0~max 제한)
+             return { ...s, value: val }
+          }
+          
+          return s
+        })
+        updatePayload.status = newStatus
+      }
+
+      // 3. Params 업데이트 처리
+      if (updates.params) {
+        const newParams = target.params.map((p: any) => {
+          if (updates.params![p.label] !== undefined) {
+            hasChanges = true
+            return { ...p, value: updates.params![p.label] }
+          }
+          return p
+        })
+        updatePayload.params = newParams
+      }
+
+      // 4. 변경 사항이 있을 때만 Firestore 저장
+      if (hasChanges) {
+        const targetRef = doc(collection(db, "rooms", roomId, "characters"), target._id)
+        await setDoc(targetRef, updatePayload, { merge: true })
+        console.log(`[API] Updated ${target.name}:`, updates)
+      }
+    },
+
+    /**
      * [NEW] 룸 아이템(스크린 패널, 마커 등) 관련 API
      */
     items: {

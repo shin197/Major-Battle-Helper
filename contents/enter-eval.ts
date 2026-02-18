@@ -3,6 +3,7 @@ import type { PlasmoCSConfig } from "~node_modules/plasmo/dist/type"
 import { getChatInputBox } from "~utils/elements"
 import { callCcfolia } from "~contents/ccfolia-api"
 import { evaluateMath } from "~utils/eval-math"
+import { setNativeValue } from "~utils/utils"
 
 export const config: PlasmoCSConfig = {
   matches: ["https://ccfolia.com/rooms/*"],
@@ -11,18 +12,18 @@ export const config: PlasmoCSConfig = {
 }
 
 // --- 타입 정의 ---
-interface CcfoliaStatus {
+export interface CcfoliaStatus {
   label: string
   value: number
   max: number
 }
 
-interface CcfoliaParam {
+export interface CcfoliaParam {
   label: string
   value: string
 }
 
-interface CcfoliaCharacter {
+export interface CcfoliaCharacter {
   _id: string
   name: string
   status: CcfoliaStatus[]
@@ -34,19 +35,9 @@ interface CcfoliaCharacter {
 }
 
 /** -----------------------------------------------
- * 0. 도우미: React-controlled textarea에 값 주입
- * ----------------------------------------------*/
-function setNativeValue(el: HTMLTextAreaElement, value: string) {
-  const proto = Object.getPrototypeOf(el) as HTMLTextAreaElement
-  const setter = Object.getOwnPropertyDescriptor(proto, "value")?.set
-  setter?.call(el, value)
-  el.dispatchEvent(new Event("input", { bubbles: true }))
-}
-
-/** -----------------------------------------------
  * 2. 메시지 변환 로직
  * ----------------------------------------------*/
-function transformMessage(msg: string, character: CcfoliaCharacter): string {
+export function transformMessage(msg: string, character: CcfoliaCharacter): string {
   let result = msg
 
   // 1. 변수 치환 (Status & Params)
@@ -89,62 +80,106 @@ function escapeRegExp(string: string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 }
 
-/** -----------------------------------------------
- * 3. /stat 명령어 처리 (Status 및 Params 업데이트)
- * ----------------------------------------------*/
-async function handleStatCommand(character: CcfoliaCharacter, commandLine: string) {
+export async function handleStatCommand(character: CcfoliaCharacter, commandLine: string) {
   const content = commandLine.replace(/^\/stat\s+/, "").trim()
   
-  // 파싱: 라벨 + 연산자(=,+,-) + 값
-  const match = content.match(/^(.+?)([\+\-\=])(.*)$/)
-  if (!match) return
+  // 1. 명령어 분리  
+  const parts = content.split(/[\s,]+/).filter(p => p.length > 0)
+  if (parts.length === 0) return
 
-  const [, label, operator, valStr] = match
-  
-  // 값 부분에 수식이 남아있다면 추가 계산 (예: /stat HP+3+5 -> 3+5 계산)
-  let finalValStr = valStr
-  const calculated = evaluateMath(valStr)
-  if (calculated) finalValStr = calculated
+  const statusUpdates: Record<string, number> = {}
+  const paramUpdates: Record<string, string> = {}
 
-  const isNumericOp = operator === "+" || operator === "-"
-  const numVal = parseInt(finalValStr, 10)
-
-  // A. Status 검색
-  const targetStatus = character.status.find(s => s.label === label)
-  if (targetStatus) {
-    if (isNaN(numVal) && isNumericOp) return 
-
-    let newValue = targetStatus.value
-    if (operator === "=" && !isNaN(numVal)) newValue = numVal
-    else if (operator === "+") newValue += numVal
-    else if (operator === "-") newValue -= numVal
-    
-    await callCcfolia("setStatus", character.name, label, newValue)
-    console.info(`[Major Battle Helper] Status Updated: ${label} -> ${newValue}`)
-    return
-  }
-
-  // B. Params 검색
-  const targetParam = character.params.find(p => p.label === label)
-  if (targetParam) {
-    let newValue = targetParam.value // string
-
-    if (isNumericOp) {
-      const currentInt = parseInt(newValue, 10)
-      if (!isNaN(currentInt) && !isNaN(numVal)) {
-        if (operator === "+") newValue = String(currentInt + numVal)
-        else if (operator === "-") newValue = String(currentInt - numVal)
-      } else {
-        console.warn(`[Major Battle Helper] Cannot do math on non-numeric param: ${newValue}`)
-        return
-      }
-    } else if (operator === "=") {
-      newValue = finalValStr
+  for (const part of parts) {
+    // 2. 파싱: 라벨 + 연산자(+, -, =, :) + 값
+    // 정규식에 : 추가됨
+    const match = part.match(/^(.+?)([\+\-\=\:])(.*)$/)
+    if (!match) {
+      console.warn(`[BattleHelper] Invalid format: ${part}`)
+      continue
     }
 
-    await callCcfolia("setParam", character.name, label, newValue)
-    console.info(`[Major Battle Helper] Param Updated: ${label} -> ${newValue}`)
-    return
+    const [, label, operator, valStr] = match
+    
+    // --- [기능 추가] 콜론(:) 연산자 처리 ---
+    // 조건: 수식 계산 없이 문자열 그대로 Params에 대입. Status는 무시함.
+    if (operator === ":") {
+      const targetParam = character.params.find(p => p.label === label)
+      if (targetParam) {
+        paramUpdates[label] = valStr
+      } else {
+        // Params에 없으면 경고 (Status에 있어도 무시됨)
+        console.warn(`[BattleHelper] Param not found for string assignment: ${label}`)
+      }
+      continue // 다음 명령어로 넘어감
+    }
+
+    // --- 기존 로직 (+, -, =) ---
+    
+    // 수식 계산
+    let finalValStr = valStr
+    const calculated = evaluateMath(valStr)
+    if (calculated) finalValStr = calculated
+
+    const isNumericOp = operator === "+" || operator === "-"
+    const numVal = parseInt(finalValStr, 10)
+
+    // A. Status 검색 (숫자형)
+    const targetStatus = character.status.find(s => s.label === label)
+    if (targetStatus) {
+      if (isNaN(numVal) && isNumericOp) continue
+
+      let currentVal = statusUpdates[label] !== undefined ? statusUpdates[label] : targetStatus.value
+      
+      let newValue = currentVal
+      if (operator === "=" && !isNaN(numVal)) newValue = numVal
+      else if (operator === "+") newValue += numVal
+      else if (operator === "-") newValue -= numVal
+      
+      statusUpdates[label] = newValue
+      continue
+    }
+
+    // B. Params 검색 (문자열/숫자 혼용)
+    const targetParam = character.params.find(p => p.label === label)
+    if (targetParam) {
+      let currentValStr = paramUpdates[label] !== undefined ? paramUpdates[label] : targetParam.value
+      let newValue = currentValStr
+
+      if (isNumericOp) {
+        // 숫자 연산 (+, -)
+        const currentInt = parseInt(currentValStr, 10)
+        if (!isNaN(currentInt) && !isNaN(numVal)) {
+          if (operator === "+") newValue = String(currentInt + numVal)
+          else if (operator === "-") newValue = String(currentInt - numVal)
+        } else {
+          console.warn(`[BattleHelper] Non-numeric param math: ${part}`)
+          continue
+        }
+      } else if (operator === "=") {
+        // 단순 대입 (=)
+        newValue = finalValStr
+      }
+      
+      paramUpdates[label] = newValue
+      continue
+    }
+  }
+
+  // 3. API 호출
+  const hasStatusUpdates = Object.keys(statusUpdates).length > 0
+  const hasParamUpdates = Object.keys(paramUpdates).length > 0
+
+  if (hasStatusUpdates || hasParamUpdates) {
+    try {
+      await callCcfolia("patchCharacter", character.name, {
+        status: hasStatusUpdates ? statusUpdates : undefined,
+        params: hasParamUpdates ? paramUpdates : undefined
+      })
+      console.info(`[BattleHelper] Batch Update applied for ${character.name}`, { statusUpdates, paramUpdates })
+    } catch (e) {
+      console.error("[BattleHelper] patchCharacter failed:", e)
+    }
   }
 }
 

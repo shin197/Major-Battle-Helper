@@ -16,3 +16,10 @@ export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 export const uuid = () => {
   return `${Date.now()}_${Math.random().toString(16).slice(2)}`
 }
+
+export const setNativeValue = (el: HTMLTextAreaElement, value: string) => {
+  const proto = Object.getPrototypeOf(el) as HTMLTextAreaElement
+  const setter = Object.getOwnPropertyDescriptor(proto, "value")?.set
+  setter?.call(el, value)
+  el.dispatchEvent(new Event("input", { bubbles: true }))
+}
