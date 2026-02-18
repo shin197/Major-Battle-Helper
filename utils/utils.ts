@@ -13,3 +13,6 @@ export const generateRandomId = (): string => {
 }
 
 export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+export const uuid = () => {
+  return `${Date.now()}_${Math.random().toString(16).slice(2)}`
+}

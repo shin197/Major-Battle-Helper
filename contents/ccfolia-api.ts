@@ -1,8 +1,7 @@
-function uuid() {
-  return `${Date.now()}_${Math.random().toString(16).slice(2)}`
-}
+import { uuid } from "~utils/utils"
 
-function callCcfolia<T = any>(method: string, ...args: any[]): Promise<T> {
+
+export function callCcfolia<T = any>(method: string, ...args: any[]): Promise<T> {
   const id = uuid()
 
   return new Promise<T>((resolve, reject) => {
