@@ -4,12 +4,12 @@ export const toNum = (s: string | undefined | null) => {
   return Number.isFinite(n) ? n : undefined
 }
 export const generateRandomId = (): string => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
-    let autoId = ''
-    for (let i = 0; i < 20; i++) {
-        autoId += chars.charAt(Math.floor(Math.random() * chars.length))
-    }
-    return autoId
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+  let autoId = ""
+  for (let i = 0; i < 20; i++) {
+    autoId += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  return autoId
 }
 
 export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))

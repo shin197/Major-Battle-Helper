@@ -1,5 +1,6 @@
 import type { PlasmoCSConfig } from "plasmo"
-import { generateRandomId } from "~utils/utils";
+
+import { generateRandomId } from "~utils/utils"
 
 export const config: PlasmoCSConfig = {
   matches: ["https://ccfolia.com/rooms/*"],
@@ -10,26 +11,26 @@ export const config: PlasmoCSConfig = {
 // --- 1. 타입 정의 (Types) ---
 
 interface CcfoliaStatus {
-  label: string;
-  value: number;
-  max: number;
+  label: string
+  value: number
+  max: number
 }
 
 interface CcfoliaParam {
-  label: string;
-  value: string;
+  label: string
+  value: string
 }
 
 interface CcfoliaCharacter {
-  _id: string;
-  name: string;
-  status: CcfoliaStatus[];
-  params: CcfoliaParam[];
-  active: boolean;    // 맵에 표시 여부
-  secret: boolean;    // 비밀 여부
-  invisible: boolean; // 투명 여부 (GM 전용)
-  commands?: string;  // 채팅 팔레트
-  [key: string]: any;
+  _id: string
+  name: string
+  status: CcfoliaStatus[]
+  params: CcfoliaParam[]
+  active: boolean // 맵에 표시 여부
+  secret: boolean // 비밀 여부
+  invisible: boolean // 투명 여부 (GM 전용)
+  commands?: string // 채팅 팔레트
+  [key: string]: any
 }
 
 declare global {
@@ -124,7 +125,10 @@ function resolveFirestoreTools(req: any) {
     }
   }
 
-  const fsId = findModuleIdByExportShape(req, (mod) => !!pickFirestoreExports(mod))
+  const fsId = findModuleIdByExportShape(
+    req,
+    (mod) => !!pickFirestoreExports(mod)
+  )
   if (fsId == null) throw new Error("Firestore SDK 모듈 탐색 실패")
 
   window.__CCFOLIA_MOD_CACHE__!.fsId = fsId
@@ -149,7 +153,8 @@ function pickFirestoreExports(mod: any): null | {
 
   const setDoc = typeof candSetDoc === "function" ? candSetDoc : null
   const doc = typeof candDoc === "function" ? candDoc : null
-  const collection = typeof candCollection === "function" ? candCollection : null
+  const collection =
+    typeof candCollection === "function" ? candCollection : null
   const deleteDoc = typeof candDeleteDoc === "function" ? candDeleteDoc : null
 
   if (setDoc && doc && collection) return { setDoc, doc, collection, deleteDoc }
@@ -186,11 +191,11 @@ function pickDb(mod: any): any | null {
 
 function resolveSelectors(req: any) {
   window.__CCFOLIA_MOD_CACHE__ ??= {}
-  
+
   // 캐시 확인
   if (window.__CCFOLIA_MOD_CACHE__.selId) {
-     const mod = req(window.__CCFOLIA_MOD_CACHE__.selId)
-     if (pickSelectors(mod)) return mod
+    const mod = req(window.__CCFOLIA_MOD_CACHE__.selId)
+    if (pickSelectors(mod)) return mod
   }
 
   // 1. 알려진 ID(88464) 먼저 시도
@@ -215,38 +220,42 @@ function resolveSelectors(req: any) {
 function pickSelectors(mod: any) {
   if (!mod) return null
   // 특징적인 함수 이름들이 존재하는지 확인
-  return typeof mod.getRoomCharacterIds === 'function' && typeof mod.getCharacterById === 'function'
+  return (
+    typeof mod.getRoomCharacterIds === "function" &&
+    typeof mod.getCharacterById === "function"
+  )
 }
 // --- 4. 헬퍼 함수 ---
 
 function getServices() {
-    const store = window.__MY_REDUX || stealReduxStore()
-    const req = window.webpackRequire || stealWebpackRequire()
-    
-    if (!store) throw new Error("Redux Store를 찾을 수 없습니다.")
-    if (!req) throw new Error("Webpack Require를 찾을 수 없습니다.")
-    
-    // 모듈 동적 로드
-    const fsTools = resolveFirestoreTools(req)
-    const dbInstance = resolveDb(req)
-    const selectors = resolveSelectors(req) // 선택적 로드
-    
-    // 현재 방 정보
-    const state = store.getState()
-    const roomId = state.app?.state?.roomId
-    const rc = state.entities?.roomCharacters
-    
-    if (!roomId || !rc) throw new Error("방 데이터(RoomID/Characters)를 읽을 수 없습니다.")
-    
-    return {
-        store,
-        req,
-        fsTools,
-        db: dbInstance,
-        selectors,
-        roomId,
-        rc
-    }
+  const store = window.__MY_REDUX || stealReduxStore()
+  const req = window.webpackRequire || stealWebpackRequire()
+
+  if (!store) throw new Error("Redux Store를 찾을 수 없습니다.")
+  if (!req) throw new Error("Webpack Require를 찾을 수 없습니다.")
+
+  // 모듈 동적 로드
+  const fsTools = resolveFirestoreTools(req)
+  const dbInstance = resolveDb(req)
+  const selectors = resolveSelectors(req) // 선택적 로드
+
+  // 현재 방 정보
+  const state = store.getState()
+  const roomId = state.app?.state?.roomId
+  const rc = state.entities?.roomCharacters
+
+  if (!roomId || !rc)
+    throw new Error("방 데이터(RoomID/Characters)를 읽을 수 없습니다.")
+
+  return {
+    store,
+    req,
+    fsTools,
+    db: dbInstance,
+    selectors,
+    roomId,
+    rc
+  }
 }
 
 // --- 5. 강력해진 API 구현 ---
@@ -254,33 +263,37 @@ function getServices() {
 function initCCfoliaAPI() {
   // 초기화 시도
   try {
-      stealWebpackRequire()
-      window.__MY_REDUX = stealReduxStore()
-  } catch(e) {}
+    stealWebpackRequire()
+    window.__MY_REDUX = stealReduxStore()
+  } catch (e) {}
 
   window.ccfoliaAPI = {
-    
-    getCharacters: (filterType: 'all' | 'active' | 'mine' | 'status' = 'all'): CcfoliaCharacter[] => {
+    getCharacters: (
+      filterType: "all" | "active" | "mine" | "status" = "all"
+    ): CcfoliaCharacter[] => {
       const { store, selectors, rc } = getServices()
       const state = store.getState()
 
       // 1. Selector 모듈을 찾았다면 활용 (더 정확함)
       if (selectors) {
         let ids: string[] = []
-        if (filterType === 'active') ids = selectors.getRoomActiveCharacterIds(state)
-        else if (filterType === 'mine') ids = selectors.getMyRoomCharacterIds(state)
-        else if (filterType === 'status') ids = selectors.getRoomShowStatusCharacterIds(state)
+        if (filterType === "active")
+          ids = selectors.getRoomActiveCharacterIds(state)
+        else if (filterType === "mine")
+          ids = selectors.getMyRoomCharacterIds(state)
+        else if (filterType === "status")
+          ids = selectors.getRoomShowStatusCharacterIds(state)
         else ids = selectors.getRoomCharacterIds(state) // all
-        return ids.map(id => rc.entities[id]).filter(Boolean)
-      } 
-      
+        return ids.map((id) => rc.entities[id]).filter(Boolean)
+      }
+
       // 2. 못 찾았다면 수동 필터링 (Fallback)
       else {
         let chars = rc.ids.map((id: string) => rc.entities[id])
-        if (filterType === 'active') chars = chars.filter((c: any) => c.active)
-        if (filterType === 'mine') {
-           const myUid = state.app.state.uid // 현재 내 UID
-           chars = chars.filter((c: any) => c.owner === myUid)
+        if (filterType === "active") chars = chars.filter((c: any) => c.active)
+        if (filterType === "mine") {
+          const myUid = state.app.state.uid // 현재 내 UID
+          chars = chars.filter((c: any) => c.owner === myUid)
         }
         return chars
       }
@@ -290,45 +303,47 @@ function initCCfoliaAPI() {
       const { fsTools, db, roomId, store } = getServices()
       const { setDoc, doc, collection } = fsTools
       const state = store.getState()
-      
+
       // 컬렉션 참조에서 새로운 ID 자동 생성
       const colRef = collection(db, "rooms", roomId, "characters")
       // Firestore v9 방식: doc(colRef)를 호출하면 랜덤 ID를 가진 참조 생성
-      // 하지만 minified된 doc함수가 인자 1개를 지원하는지 불확실하므로, 
+      // 하지만 minified된 doc함수가 인자 1개를 지원하는지 불확실하므로,
       // 안전하게 랜덤 ID를 직접 만들거나 기존 캐릭터를 복사함.
-      
+
       // 1. 템플릿 준비
       let template: any = {
-          name: "New Character",
-          status: [{ label: "HP", value: 10, max: 10 }],
-          params: [{ label: "MEMO", value: "" }],
-          active: true,
-          secret: false,
-          invisible: false,
-          owner: state.app.state.uid, // 내 캐릭터로 생성
-          createdAt: Date.now(),
-          updatedAt: Date.now()
+        name: "New Character",
+        status: [{ label: "HP", value: 10, max: 10 }],
+        params: [{ label: "MEMO", value: "" }],
+        active: true,
+        secret: false,
+        invisible: false,
+        owner: state.app.state.uid, // 내 캐릭터로 생성
+        createdAt: Date.now(),
+        updatedAt: Date.now()
       }
 
       if (sourceName) {
-          const source = window.ccfoliaAPI.getCharacters('all').find((c:any) => c.name.includes(sourceName))
-          if (source) {
-              template = { ...source }
-              delete template._id // ID는 새로 따야 함
-              template.name = source.name + " (Copy)"
-              template.createdAt = Date.now()
-          }
+        const source = window.ccfoliaAPI
+          .getCharacters("all")
+          .find((c: any) => c.name.includes(sourceName))
+        if (source) {
+          template = { ...source }
+          delete template._id // ID는 새로 따야 함
+          template.name = source.name + " (Copy)"
+          template.createdAt = Date.now()
+        }
       }
 
       // 2. 새 문서 생성 (ID는 setDoc이 아닌 doc()에서 생성해야 하지만, 여기선 임의 ID 생성 로직 사용)
       // 코코포리아는 20자리 랜덤 문자열 ID를 사용함.
-      const newId = generateRandomId() 
+      const newId = generateRandomId()
       const newRef = doc(colRef, newId)
-      
+
       await setDoc(newRef, template)
       console.log(`[API] 캐릭터 생성 완료: ${template.name}`)
     },
-        
+
     /**
      * [삭제] 캐릭터 삭제
      */
@@ -338,9 +353,11 @@ function initCCfoliaAPI() {
 
       if (!deleteDoc) throw new Error("deleteDoc 함수를 찾을 수 없습니다.")
 
-      const target = window.ccfoliaAPI.getCharacters('all').find((c: any) => c.name.includes(namePart))
+      const target = window.ccfoliaAPI
+        .getCharacters("all")
+        .find((c: any) => c.name.includes(namePart))
       if (!target) throw new Error(`'${namePart}' 캐릭터 없음`)
-      
+
       if (!confirm(`정말 '${target.name}' 캐릭터를 삭제하시겠습니까?`)) return
 
       const ref = doc(collection(db, "rooms", roomId, "characters"), target._id)
@@ -353,8 +370,9 @@ function initCCfoliaAPI() {
      */
     getChar: (namePart: string): CcfoliaCharacter | undefined => {
       const { rc } = getServices()
-      return rc.ids.map((id: string) => rc.entities[id])
-                   .find((c: CcfoliaCharacter) => c.name?.includes(namePart))
+      return rc.ids
+        .map((id: string) => rc.entities[id])
+        .find((c: CcfoliaCharacter) => c.name?.includes(namePart))
     },
 
     /**
@@ -366,23 +384,30 @@ function initCCfoliaAPI() {
     setStatus: async (namePart: string, labelPart: string, value: number) => {
       const { fsTools, db, roomId, rc } = getServices()
       const { setDoc, doc, collection } = fsTools
-      
+
       const target = window.ccfoliaAPI.getChar(namePart)
       if (!target) throw new Error(`캐릭터 '${namePart}'를 찾을 수 없습니다.`)
 
-      const newStatus = target.status.map(s => {
+      const newStatus = target.status.map((s) => {
         if (s.label.includes(labelPart)) {
-            // 최대값/최소값 보정 (선택사항)
-            let val = value
-            // if (val < 0) val = 0 
-            // if (val > s.max) val = s.max
-            return { ...s, value: val }
+          // 최대값/최소값 보정 (선택사항)
+          let val = value
+          // if (val < 0) val = 0
+          // if (val > s.max) val = s.max
+          return { ...s, value: val }
         }
         return s
       })
 
-      const targetRef = doc(collection(db, "rooms", roomId, "characters"), target._id)
-      await setDoc(targetRef, { status: newStatus, updatedAt: Date.now() }, { merge: true })
+      const targetRef = doc(
+        collection(db, "rooms", roomId, "characters"),
+        target._id
+      )
+      await setDoc(
+        targetRef,
+        { status: newStatus, updatedAt: Date.now() },
+        { merge: true }
+      )
       console.log(`[API] ${target.name}: ${labelPart} -> ${value}`)
     },
 
@@ -391,65 +416,85 @@ function initCCfoliaAPI() {
      * - newValue: 문자열로 입력해야 함
      */
     setParam: async (namePart: string, labelPart: string, newValue: string) => {
-        const { fsTools, db, roomId } = getServices()
-        const { setDoc, doc, collection } = fsTools
+      const { fsTools, db, roomId } = getServices()
+      const { setDoc, doc, collection } = fsTools
 
-        const target = window.ccfoliaAPI.getChar(namePart)
-        if (!target) throw new Error(`캐릭터 '${namePart}'를 찾을 수 없습니다.`)
+      const target = window.ccfoliaAPI.getChar(namePart)
+      if (!target) throw new Error(`캐릭터 '${namePart}'를 찾을 수 없습니다.`)
 
-        const newParams = target.params.map(p => {
-            if (p.label === labelPart) {
-                return { ...p, value: newValue }
-            }
-            return p
-        })
+      const newParams = target.params.map((p) => {
+        if (p.label === labelPart) {
+          return { ...p, value: newValue }
+        }
+        return p
+      })
 
-        const targetRef = doc(collection(db, "rooms", roomId, "characters"), target._id)
-        await setDoc(targetRef, { params: newParams, updatedAt: Date.now() }, { merge: true })
-        console.log(`[API] ${target.name}: ${labelPart} -> ${newValue}`)
+      const targetRef = doc(
+        collection(db, "rooms", roomId, "characters"),
+        target._id
+      )
+      await setDoc(
+        targetRef,
+        { params: newParams, updatedAt: Date.now() },
+        { merge: true }
+      )
+      console.log(`[API] ${target.name}: ${labelPart} -> ${newValue}`)
     },
 
     /**
      * 캐릭터 속성 토글 (맵 표시, 투명화, 비밀 등)
      * - prop: 'active' | 'invisible' | 'secret'
      */
-    toggleProp: async (namePart: string, prop: 'active' | 'invisible' | 'secret') => {
-        const { fsTools, db, roomId } = getServices()
-        const { setDoc, doc, collection } = fsTools
+    toggleProp: async (
+      namePart: string,
+      prop: "active" | "invisible" | "secret"
+    ) => {
+      const { fsTools, db, roomId } = getServices()
+      const { setDoc, doc, collection } = fsTools
 
-        const target = window.ccfoliaAPI.getChar(namePart)
-        if (!target) throw new Error(`캐릭터 '${namePart}'를 찾을 수 없습니다.`)
+      const target = window.ccfoliaAPI.getChar(namePart)
+      if (!target) throw new Error(`캐릭터 '${namePart}'를 찾을 수 없습니다.`)
 
-        const newValue = !target[prop]
-        const targetRef = doc(collection(db, "rooms", roomId, "characters"), target._id)
-        
-        const payload: any = { updatedAt: Date.now() }
-        payload[prop] = newValue
+      const newValue = !target[prop]
+      const targetRef = doc(
+        collection(db, "rooms", roomId, "characters"),
+        target._id
+      )
 
-        await setDoc(targetRef, payload, { merge: true })
-        console.log(`[API] ${target.name}: ${prop} -> ${newValue}`)
+      const payload: any = { updatedAt: Date.now() }
+      payload[prop] = newValue
+
+      await setDoc(targetRef, payload, { merge: true })
+      console.log(`[API] ${target.name}: ${prop} -> ${newValue}`)
     },
 
     /**
      * 캐릭터 채팅 명령어(Palette) 수정
      */
     setCommands: async (namePart: string, newCommands: string) => {
-        const { fsTools, db, roomId } = getServices()
-        const { setDoc, doc, collection } = fsTools
+      const { fsTools, db, roomId } = getServices()
+      const { setDoc, doc, collection } = fsTools
 
-        const target = window.ccfoliaAPI.getChar(namePart)
-        if (!target) throw new Error(`캐릭터 '${namePart}'를 찾을 수 없습니다.`)
+      const target = window.ccfoliaAPI.getChar(namePart)
+      if (!target) throw new Error(`캐릭터 '${namePart}'를 찾을 수 없습니다.`)
 
-        const targetRef = doc(collection(db, "rooms", roomId, "characters"), target._id)
-        await setDoc(targetRef, { commands: newCommands, updatedAt: Date.now() }, { merge: true })
-        console.log(`[API] ${target.name}: 명령어 수정 완료`)
+      const targetRef = doc(
+        collection(db, "rooms", roomId, "characters"),
+        target._id
+      )
+      await setDoc(
+        targetRef,
+        { commands: newCommands, updatedAt: Date.now() },
+        { merge: true }
+      )
+      console.log(`[API] ${target.name}: 명령어 수정 완료`)
     },
 
     patchCharacter: async (
-      namePart: string, 
-      updates: { 
-        status?: Record<string, number>, 
-        params?: Record<string, string> 
+      namePart: string,
+      updates: {
+        status?: Record<string, number>
+        params?: Record<string, string>
       }
     ) => {
       const { fsTools, db, roomId } = getServices()
@@ -467,15 +512,15 @@ function initCCfoliaAPI() {
         const newStatus = target.status.map((s: any) => {
           // updates.status 키 중에 s.label을 포함하는 것이 있는지 확인
           // (정확히 일치하는 것을 우선하고, 없으면 포함하는 것을 찾음 - 기존 로직 유지)
-          
+
           // 정확한 일치 우선 검색
           if (updates.status![s.label] !== undefined) {
-             hasChanges = true
-             let val = updates.status![s.label]
-             // val = Math.max(0, Math.min(val, s.max)) // 필요 시 주석 해제 (0~max 제한)
-             return { ...s, value: val }
+            hasChanges = true
+            let val = updates.status![s.label]
+            // val = Math.max(0, Math.min(val, s.max)) // 필요 시 주석 해제 (0~max 제한)
+            return { ...s, value: val }
           }
-          
+
           return s
         })
         updatePayload.status = newStatus
@@ -495,7 +540,10 @@ function initCCfoliaAPI() {
 
       // 4. 변경 사항이 있을 때만 Firestore 저장
       if (hasChanges) {
-        const targetRef = doc(collection(db, "rooms", roomId, "characters"), target._id)
+        const targetRef = doc(
+          collection(db, "rooms", roomId, "characters"),
+          target._id
+        )
         await setDoc(targetRef, updatePayload, { merge: true })
         console.log(`[API] Updated ${target.name}:`, updates)
       }
@@ -510,23 +558,23 @@ function initCCfoliaAPI() {
        * - provided file의 'state.entities.roomItems.entities' 참조
        */
       getAll: () => {
-        const { store } = getServices();
-        const state = store.getState();
-        const roomItems = state.entities.roomItems;
-        if (!roomItems) return [];
-        
+        const { store } = getServices()
+        const state = store.getState()
+        const roomItems = state.entities.roomItems
+        if (!roomItems) return []
+
         // 정렬된 ID 순서대로 객체 배열 반환 (Z-index 순서일 가능성 높음)
         // provided file의 'getSortedRoomItemIds' 로직 대체
-        return roomItems.ids.map((id: string) => roomItems.entities[id]);
+        return roomItems.ids.map((id: string) => roomItems.entities[id])
       },
 
       /**
        * 2. 특정 ID의 아이템 정보 가져오기
        */
       getById: (itemId: string) => {
-        const { store } = getServices();
-        const state = store.getState();
-        return state.entities.roomItems.entities[itemId];
+        const { store } = getServices()
+        const state = store.getState()
+        return state.entities.roomItems.entities[itemId]
       },
 
       /**
@@ -537,16 +585,19 @@ function initCCfoliaAPI() {
       toggleInspector: () => {
         if ((window as any).__CCFOLIA_INSPECTOR_ACTIVE) {
           // 끄기
-          document.removeEventListener("mousemove", hoverHandler);
-          document.removeEventListener("click", clickHandler);
-          (window as any).__CCFOLIA_INSPECTOR_ACTIVE = false;
-          console.log("%c[API] 🕵️‍♂️ 아이템 인스펙터 OFF", "color: gray");
+          document.removeEventListener("mousemove", hoverHandler)
+          document.removeEventListener("click", clickHandler)
+          ;(window as any).__CCFOLIA_INSPECTOR_ACTIVE = false
+          console.log("%c[API] 🕵️‍♂️ 아이템 인스펙터 OFF", "color: gray")
         } else {
           // 켜기
-          document.addEventListener("mousemove", hoverHandler);
-          document.addEventListener("click", clickHandler);
-          (window as any).__CCFOLIA_INSPECTOR_ACTIVE = true;
-          console.log("%c[API] 🕵️‍♂️ 아이템 인스펙터 ON - 아이템 위에 마우스를 올리세요.", "color: lime");
+          document.addEventListener("mousemove", hoverHandler)
+          document.addEventListener("click", clickHandler)
+          ;(window as any).__CCFOLIA_INSPECTOR_ACTIVE = true
+          console.log(
+            "%c[API] 🕵️‍♂️ 아이템 인스펙터 ON - 아이템 위에 마우스를 올리세요.",
+            "color: lime"
+          )
         }
       }
     },
@@ -555,14 +606,14 @@ function initCCfoliaAPI() {
      * 디버그용: 현재 캐릭터 전체 정보 덤프
      */
     inspect: (namePart: string) => {
-        const char = window.ccfoliaAPI.getChar(namePart)
-        console.log(`[API] Inspect '${namePart}':`, char)
-        return char
+      const char = window.ccfoliaAPI.getChar(namePart)
+      console.log(`[API] Inspect '${namePart}':`, char)
+      return char
     },
 
     /**
-   * [개발자 도구] 모듈 탐험 및 분석용 도구 모음
-   */
+     * [개발자 도구] 모듈 탐험 및 분석용 도구 모음
+     */
     devtools: {
       /**
        * 1. 특정 모듈 ID의 내용물을 콘솔에 출력합니다.
@@ -570,27 +621,27 @@ function initCCfoliaAPI() {
        */
       inspect: (moduleId: number) => {
         try {
-          const req = window.webpackRequire;
-          if (!req) throw new Error("WebpackRequire 없음");
-          
-          const mod = req(moduleId);
-          console.group(`📦 Module [${moduleId}] Inspector`);
-          console.log("Exported Value:", mod);
-          
+          const req = window.webpackRequire
+          if (!req) throw new Error("WebpackRequire 없음")
+
+          const mod = req(moduleId)
+          console.group(`📦 Module [${moduleId}] Inspector`)
+          console.log("Exported Value:", mod)
+
           // 함수 목록만 따로 보여주기 (Signature 확인용)
-          if (typeof mod === 'object') {
-              console.groupCollapsed("Functions List");
-              Object.entries(mod).forEach(([key, val]) => {
-                  if (typeof val === 'function') {
-                      console.log(`${key}:`, val.toString().slice(0, 50) + "...");
-                  }
-              });
-              console.groupEnd();
+          if (typeof mod === "object") {
+            console.groupCollapsed("Functions List")
+            Object.entries(mod).forEach(([key, val]) => {
+              if (typeof val === "function") {
+                console.log(`${key}:`, val.toString().slice(0, 50) + "...")
+              }
+            })
+            console.groupEnd()
           }
-          console.groupEnd();
-          return mod;
+          console.groupEnd()
+          return mod
         } catch (e) {
-          console.error(`모듈 ${moduleId} 로드 실패:`, e);
+          console.error(`모듈 ${moduleId} 로드 실패:`, e)
         }
       },
 
@@ -600,117 +651,128 @@ function initCCfoliaAPI() {
        * 주의: 너무 짧은 키워드는 결과가 많을 수 있습니다.
        */
       search: (keyword: string) => {
-        const req = window.webpackRequire;
-        const modules = req.m; // 모듈 팩토리 배열
-        const results: Record<string, any> = {};
+        const req = window.webpackRequire
+        const modules = req.m // 모듈 팩토리 배열
+        const results: Record<string, any> = {}
 
-        console.log(`🔎 "${keyword}" 검색 시작...`);
-        
+        console.log(`🔎 "${keyword}" 검색 시작...`)
+
         for (const id in modules) {
           try {
             // 모듈 소스코드(문자열)에서 검색 (로딩 전 탐색)
-            const source = modules[id].toString();
+            const source = modules[id].toString()
             if (source.includes(keyword)) {
-              console.log(`FOUND in Source [${id}]`);
+              console.log(`FOUND in Source [${id}]`)
               // 안전하게 로드 시도
-              try { results[id] = req(id); } catch { results[id] = "(Load Error)"; }
+              try {
+                results[id] = req(id)
+              } catch {
+                results[id] = "(Load Error)"
+              }
             }
           } catch (e) {}
         }
-        
-        console.log("검색 결과:", results);
-        return results;
+
+        console.log("검색 결과:", results)
+        return results
       },
 
       /**
        * 3. 현재 로드된 모든 모듈의 ID 목록을 봅니다.
        */
       listAll: () => {
-          console.log("Available Modules:", Object.keys(window.webpackRequire.m));
+        console.log("Available Modules:", Object.keys(window.webpackRequire.m))
       }
     }
   }
 
-
-const findReactProps = (dom: HTMLElement): any => {
-    const key = Object.keys(dom).find(k => k.startsWith("__reactFiber$"));
+  const findReactProps = (dom: HTMLElement): any => {
+    const key = Object.keys(dom).find((k) => k.startsWith("__reactFiber$"))
     // @ts-ignore
-    return key ? dom[key] : null;
-  };
+    return key ? dom[key] : null
+  }
 
   // React Fiber 트리를 타고 올라가며 itemId를 가진 컴포넌트 찾기
   const findItemIdFromDom = (target: HTMLElement | null): string | null => {
-    let curr = target;
+    let curr = target
     while (curr && curr !== document.body) {
-      const fiber = findReactProps(curr);
+      const fiber = findReactProps(curr)
       if (fiber) {
-        let node = fiber;
+        let node = fiber
         while (node) {
-            // 1. props에 item 객체가 통째로 있는 경우
-            if (node.memoizedProps?.item?._id) return node.memoizedProps.item._id;
-            // 2. props에 itemId가 있는 경우
-            if (node.memoizedProps?.itemId) return node.memoizedProps.itemId;
-            // 3. 'item-id' 같은 data attribute가 있는 경우
-            if (node.memoizedProps?.["data-item-id"]) return node.memoizedProps["data-item-id"];
-            
-            node = node.return; // 부모 노드로 이동
+          // 1. props에 item 객체가 통째로 있는 경우
+          if (node.memoizedProps?.item?._id) return node.memoizedProps.item._id
+          // 2. props에 itemId가 있는 경우
+          if (node.memoizedProps?.itemId) return node.memoizedProps.itemId
+          // 3. 'item-id' 같은 data attribute가 있는 경우
+          if (node.memoizedProps?.["data-item-id"])
+            return node.memoizedProps["data-item-id"]
+
+          node = node.return // 부모 노드로 이동
         }
       }
-      curr = curr.parentElement;
+      curr = curr.parentElement
     }
-    return null;
-  };
-
-  let lastHoveredId: string | null = null;
-
-  const hoverHandler = (e: MouseEvent) => {
-    const target = e.target as HTMLElement;
-    const itemId = findItemIdFromDom(target);
-
-    if (itemId && itemId !== lastHoveredId) {
-      lastHoveredId = itemId;
-      const item = window.ccfoliaAPI.items.getById(itemId);
-      console.log(`%c[Found] ${item.name || "No Name"} (${itemId})`, "color: cyan", item);
-      
-      // 시각적 피드백 (선택사항: 테두리 표시 등)
-      target.style.outline = "2px solid cyan";
-      setTimeout(() => target.style.outline = "", 500);
-    }
-  };
-
-  const clickHandler = (e: MouseEvent) => {
-      // 클릭 시 해당 아이템 정보 고정 출력 (Deep copy)
-      const target = e.target as HTMLElement;
-      const itemId = findItemIdFromDom(target);
-      if(itemId) {
-          const item = window.ccfoliaAPI.items.getById(itemId);
-          console.log(`%c[Clicked] ${itemId}`, "color: yellow; font-weight:bold;", JSON.parse(JSON.stringify(item)));
-      }
+    return null
   }
 
+  let lastHoveredId: string | null = null
+
+  const hoverHandler = (e: MouseEvent) => {
+    const target = e.target as HTMLElement
+    const itemId = findItemIdFromDom(target)
+
+    if (itemId && itemId !== lastHoveredId) {
+      lastHoveredId = itemId
+      const item = window.ccfoliaAPI.items.getById(itemId)
+      console.log(
+        `%c[Found] ${item.name || "No Name"} (${itemId})`,
+        "color: cyan",
+        item
+      )
+
+      // 시각적 피드백 (선택사항: 테두리 표시 등)
+      target.style.outline = "2px solid cyan"
+      setTimeout(() => (target.style.outline = ""), 500)
+    }
+  }
+
+  const clickHandler = (e: MouseEvent) => {
+    // 클릭 시 해당 아이템 정보 고정 출력 (Deep copy)
+    const target = e.target as HTMLElement
+    const itemId = findItemIdFromDom(target)
+    if (itemId) {
+      const item = window.ccfoliaAPI.items.getById(itemId)
+      console.log(
+        `%c[Clicked] ${itemId}`,
+        "color: yellow; font-weight:bold;",
+        JSON.parse(JSON.stringify(item))
+      )
+    }
+  }
 
   installCcfoliaRpcBridge()
   console.log("%c[CCFOLIA-API] 인젝트 완료")
 
-// --- 7. 테스트 코드 (요청하신 부분) ---
+  // --- 7. 테스트 코드 (요청하신 부분) ---
   // 페이지 로드 3초 후 실행됩니다.
   // setTimeout(async () => {
   //   console.log("[CCFOLIA-API] 10초 경과: 테스트 자동 실행 시도...")
-    
+
   //   // ★ 여기에 테스트하고 싶은 캐릭터 이름을 적으세요
-  //   const targetName = "크시카" 
-    
+  //   const targetName = "크시카"
+
   //   try {
   //       const char = window.ccfoliaAPI.getChar(targetName)
   //       if (char) {
   //           console.log(`[TEST] 타겟 발견: ${char.name}`)
-            
+
   //           // 예시: HP를 1 깎습니다.
   //           // await window.ccfoliaAPI.setStatus(targetName, "HP", -1)
-            
+
   //           // 예시: 투명화를 토글해봅니다. (필요없으면 주석처리)
   //           // await window.ccfoliaAPI.toggleProp(targetName, "invisible")
-            
+
   //           console.log("[TEST] 테스트 동작 완료!")
   //       } else {
   //           console.warn(`[TEST] 이름에 '${targetName}'가 포함된 캐릭터를 찾지 못했습니다.`)
@@ -725,7 +787,12 @@ const findReactProps = (dom: HTMLElement): any => {
 initCCfoliaAPI()
 
 type CcReq =
-  | { id: string; type: "ccfolia:call"; method: "updateCharacterHP"; args: [string, number] }
+  | {
+      id: string
+      type: "ccfolia:call"
+      method: "updateCharacterHP"
+      args: [string, number]
+    }
   | { id: string; type: "ccfolia:call"; method: "debug"; args: [] }
 
 type CcRes =
@@ -746,7 +813,8 @@ function installCcfoliaRpcBridge() {
       if (!api) throw new Error("ccfoliaAPI not ready")
 
       const fn = api[data.method]
-      if (typeof fn !== "function") throw new Error(`Unknown method: ${data.method}`)
+      if (typeof fn !== "function")
+        throw new Error(`Unknown method: ${data.method}`)
 
       const value = await fn(...(data.args as any))
       reply({ id: data.id, type: "ccfolia:result", ok: true, value })
