@@ -8,7 +8,6 @@ import {
 } from "~utils/wait-for"
 
 import type { CharacterData } from "./character-store"
-import { makeCharacterIdFromName, store } from "./character-store"
 import { showToast } from "./toast"
 
 export function extractCharacterData(
@@ -164,15 +163,15 @@ export function extractCharacterData(
     params
   }
 
-  store.upsert({
-    id: makeCharacterIdFromName(scanned.name),
-    data: scanned,
-    source: "scan",
-    merge: false // 기존 수동값을 보존하고 싶을 때
-  })
+  // store.upsert({
+  //   id: makeCharacterIdFromName(scanned.name),
+  //   data: scanned,
+  //   source: "scan",
+  //   merge: false // 기존 수동값을 보존하고 싶을 때
+  // })
 
-  const rec = store.getByName(name).data
-  console.info(rec)
+  // const rec = store.getByName(name).data
+  // console.info(rec)
 
   return scanned
 }
@@ -199,7 +198,7 @@ function setInputValue(input: HTMLInputElement, val: string) {
   input.dispatchEvent(new Event("change", { bubbles: true }))
 }
 
-export function findSections(form: HTMLFormElement) {
+function findSections(form: HTMLFormElement) {
   const topDivs = form.querySelectorAll<HTMLDivElement>(":scope > div")
   return {
     firstSection: topDivs[0] ?? null,
@@ -209,7 +208,7 @@ export function findSections(form: HTMLFormElement) {
   }
 }
 
-export function buildStatusMap(statusSection: HTMLDivElement | null) {
+function buildStatusMap(statusSection: HTMLDivElement | null) {
   const map = new Map<
     string,
     {
@@ -257,7 +256,7 @@ export function buildStatusMap(statusSection: HTMLDivElement | null) {
   return map
 }
 
-export function buildParamsMap(paramsSection: HTMLDivElement | null) {
+function buildParamsMap(paramsSection: HTMLDivElement | null) {
   const map = new Map<string, HTMLInputElement>()
   if (!paramsSection) return map
 
@@ -304,7 +303,7 @@ function clickAddButton(section: HTMLDivElement | null | undefined) {
   // return null
 }
 
-export function applyCharacterPatches(
+function applyCharacterPatches(
   dialog: HTMLDivElement,
   patches: Patch[],
   doClose: boolean
@@ -574,7 +573,7 @@ function readCurrentValue(
   return { kind: "none", field: "cur", value: null }
 }
 
-export function applyStatCommand(
+function applyStatCommand(
   dialog: HTMLDivElement,
   rawCommand: string
 ): PatchResult {
@@ -682,7 +681,7 @@ function pickItemByName(
   return found ?? null
 }
 
-export async function openCharacterEditDialogRead(
+async function openCharacterEditDialogRead(
   search?: string
 ): Promise<CharacterData> {
   const characterListBtn = getCharacterListButton()
@@ -695,7 +694,7 @@ export async function openCharacterEditDialogRead(
   return characterData
 }
 
-export async function openCharacterEditDialogWrite(
+async function openCharacterEditDialogWrite(
   search: string,
   cmd: string
 ) {
@@ -708,7 +707,7 @@ export async function openCharacterEditDialogWrite(
   if (buttonUsed) characterListBtn.click() // 다이얼로그 회수
 }
 
-export async function openCharacterEditDialog<
+async function openCharacterEditDialog<
   T extends HTMLDivElement = HTMLDivElement
 >(search?: string): Promise<DialogWaitResult<T>> {
   //Promise<HTMLDivElement>
@@ -772,7 +771,7 @@ export async function openCharacterEditDialog<
   return { dialog: dialog as T, buttonUsed }
 }
 
-export function applyStatCommandResult(dialog: HTMLDivElement, cmd: string) {
+function applyStatCommandResult(dialog: HTMLDivElement, cmd: string) {
   const result = applyStatCommand(dialog, cmd)
   if (result.total == 0) {
     showToast("❗ 캐릭터 편집 사항이 없습니다.")
