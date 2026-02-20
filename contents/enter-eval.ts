@@ -5,7 +5,7 @@ import { evaluateMath } from "~utils/eval-math"
 import type { CcfoliaCharacter } from "~utils/types"
 import { setNativeValue } from "~utils/utils"
 
-import { apiConfig } from "./ccfolia-api"
+import { ccf } from "./ccfolia-api"
 import { showToast } from "./toast"
 
 export const config: PlasmoCSConfig = {
@@ -173,7 +173,7 @@ export async function handleStatCommand(
 
   if (hasStatusUpdates || hasParamUpdates) {
     try {
-      await apiConfig.patchCharacter(character.name, {
+      await ccf.patchCharacter(character.name, {
         status: hasStatusUpdates ? statusUpdates : undefined,
         params: hasParamUpdates ? paramUpdates : undefined
       })
@@ -200,7 +200,7 @@ export async function handleCtrlEnter(ev: KeyboardEvent) {
 
   try {
     // 1. 캐릭터 데이터 가져오기
-    const character = await apiConfig.getChar(charName)
+    const character = await ccf.getCharacterByName(charName)
     // callCcfolia<CcfoliaCharacter>("getChar", charName)
 
     if (!character) {
@@ -227,6 +227,6 @@ export async function handleCtrlEnter(ev: KeyboardEvent) {
 /** -----------------------------------------------
  *  3. 한 번만 전역 리스너 등록
  * ----------------------------------------------*/
-if (process.env.ENABLE_MAJOR_BATTLE === "false") {
+if (process.env.PLASMO_PUBLIC_ENABLE_MAJOR_BATTLE === "false") {
   document.addEventListener("keydown", handleCtrlEnter, true)
 }

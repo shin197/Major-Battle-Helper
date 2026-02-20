@@ -1,4 +1,4 @@
-import { apiConfig } from "~contents/ccfolia-api"
+import { ccf } from "~contents/ccfolia-api"
 import { showToast } from "~contents/toast"
 import type { CcfoliaCharacter } from "~utils/types"
 
@@ -19,7 +19,7 @@ const INIT_PAIRS = [
  * ----------------------------------------------------------------*/
 export async function capStatus(mustCap: string[] = []) {
   try {
-    const characters = await apiConfig.getCharacters("status")
+    const characters = await ccf.getCharacters("status")
     if (!characters || characters.length === 0) {
       showToast("❗ 캐릭터를 찾을 수 없습니다.")
       return
@@ -55,7 +55,7 @@ export async function capStatus(mustCap: string[] = []) {
 
       // 변경 사항이 있는 경우 API 호출
       if (Object.keys(statusUpdates).length > 0) {
-        await apiConfig.patchCharacter(char.name, { status: statusUpdates })
+        await ccf.patchCharacter(char.name, { status: statusUpdates })
         // callCcfolia("patchCharacter", )
         updatedCount++
       }
@@ -79,8 +79,7 @@ export async function capStatus(mustCap: string[] = []) {
  * ----------------------------------------------------------------*/
 export async function initBattle() {
   try {
-    const characters = await apiConfig.getCharacters("status")
-    // callCcfolia<CcfoliaCharacter[]>("getCharacters")
+    const characters = await ccf.getCharacters("status")
     if (!characters || characters.length === 0) {
       showToast("❗ 캐릭터를 찾을 수 없습니다.")
       return
@@ -115,7 +114,7 @@ export async function initBattle() {
 
       // 변경 사항 적용
       if (Object.keys(statusUpdates).length > 0) {
-        await apiConfig.patchCharacter(char.name, {
+        await ccf.patchCharacter(char.name, {
           status: statusUpdates
         })
         //  callCcfolia("patchCharacter", )
@@ -202,7 +201,7 @@ export async function handleDmgCommand(
 
   // 방어도가 0보다 크다면 여기서 종료
   if (def > 0) {
-    await apiConfig.patchCharacter(character.name, {
+    await ccf.patchCharacter(character.name, {
       status: { DEF: Math.floor(def) }
     })
     //  callCcfolia("patchCharacter", )
@@ -240,7 +239,7 @@ export async function handleDmgCommand(
 
   // 4. API로 최종 적용
   try {
-    await apiConfig.patchCharacter(character.name, {
+    await ccf.patchCharacter(character.name, {
       status: {
         DEF: def,
         HP: Math.floor(hp),

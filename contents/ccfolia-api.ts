@@ -1,4 +1,5 @@
-// contents/ccfolia-api.ts
+import { get } from "http"
+
 import type { CcfoliaCharacter } from "../utils/types"
 
 function uuid() {
@@ -6,11 +7,11 @@ function uuid() {
 }
 
 // 공용 RPC 호출기
-export function callCcfolia<T = any>(
-  method: string,
-  ...args: any[]
-): Promise<T> {
+function ccfoliaRPC<T = any>(method: string, ...args: any[]): Promise<T> {
   const id = uuid()
+
+  // 🚨 [추가] 발신 로그
+  // console.log(`%c[RPC 📤] ${method} 호출 시도`, "color: #3b82f6", args)
 
   return new Promise<T>((resolve, reject) => {
     const onMsg = (ev: MessageEvent) => {
@@ -37,27 +38,59 @@ export function callCcfolia<T = any>(
  * 다른 Content Scripts 에서 자유롭게 가져다 쓸 수 있는
  * 강력하게 타이핑된 API 래퍼입니다.
  */
-export const apiConfig = {
+export const ccf = {
+  // ccf.characters
+  characters: {
+    getCharacters: (filterType: "all" | "active" | "mine" | "status" = "all") =>
+      ccfoliaRPC<CcfoliaCharacter[]>("characters.getCharacters", filterType),
+    getByName: (namePart: string) =>
+      ccfoliaRPC<CcfoliaCharacter | undefined>(
+        "characters.getByName",
+        namePart
+      ),
+    getById: (charId: string) =>
+      ccfoliaRPC<CcfoliaCharacter | undefined>("characters.getById", charId),
+    setStatus: (namePart: string, labelPart: string, valueDiff: number) =>
+      ccfoliaRPC<void>("characters.setStatus", namePart, labelPart, valueDiff),
+    setParam: (namePart: string, labelPart: string, newValue: string) =>
+      ccfoliaRPC<void>("characters.setParam", namePart, labelPart, newValue),
+    toggleProp: (namePart: string, prop: "active" | "invisible" | "secret") =>
+      ccfoliaRPC<void>("characters.toggleProp", namePart, prop),
+    setCommands: (namePart: string, newCommands: string) =>
+      ccfoliaRPC<void>("characters.setCommands", namePart, newCommands),
+    patch: (
+      namePart: string,
+      updates: {
+        status?: Record<string, number>
+        params?: Record<string, string>
+      }
+    ) => ccfoliaRPC<void>("characters.patch", namePart, updates)
+  },
   getCharacters: (filterType: "all" | "active" | "mine" | "status" = "all") =>
-    callCcfolia<CcfoliaCharacter[]>("getCharacters", filterType),
+    ccfoliaRPC<CcfoliaCharacter[]>("characters.getCharacters", filterType),
 
-  getChar: (namePart: string) =>
-    callCcfolia<CcfoliaCharacter | undefined>("getChar", namePart),
+  getCharacterByName: (namePart: string) =>
+    ccfoliaRPC<CcfoliaCharacter | undefined>("characters.getByName", namePart),
 
   getCharacterById: (charId: string) =>
-    callCcfolia<CcfoliaCharacter | undefined>("getCharacterById", charId),
+    ccfoliaRPC<CcfoliaCharacter | undefined>("characters.getById", charId),
 
-  setStatus: (namePart: string, labelPart: string, valueDiff: number) =>
-    callCcfolia<void>("setStatus", namePart, labelPart, valueDiff),
+  setCharacterStatus: (
+    namePart: string,
+    labelPart: string,
+    valueDiff: number
+  ) => ccfoliaRPC<void>("characters.setStatus", namePart, labelPart, valueDiff),
 
-  setParam: (namePart: string, labelPart: string, newValue: string) =>
-    callCcfolia<void>("setParam", namePart, labelPart, newValue),
+  setCharacterParam: (namePart: string, labelPart: string, newValue: string) =>
+    ccfoliaRPC<void>("characters.setParam", namePart, labelPart, newValue),
 
-  toggleProp: (namePart: string, prop: "active" | "invisible" | "secret") =>
-    callCcfolia<void>("toggleProp", namePart, prop),
+  toggleCharacterProp: (
+    namePart: string,
+    prop: "active" | "invisible" | "secret"
+  ) => ccfoliaRPC<void>("characters.toggleProp", namePart, prop),
 
-  setCommands: async (namePart: string, newCommands: string) =>
-    callCcfolia<void>("setCommands", namePart, newCommands),
+  setCharacterCommands: async (namePart: string, newCommands: string) =>
+    ccfoliaRPC<void>("characters.setCommands", namePart, newCommands),
 
   patchCharacter: async (
     namePart: string,
@@ -65,21 +98,15 @@ export const apiConfig = {
       status?: Record<string, number>
       params?: Record<string, string>
     }
-  ) => callCcfolia<void>("patchCharacter", namePart, updates),
+  ) => ccfoliaRPC<void>("characters.patch", namePart, updates),
+
+  // ccf.tokens
 
   tokens: {
     // 중첩된 객체도 문자열 "items.getAll" 형태로 호출
-    getAll: () => callCcfolia<any[]>("tokens.getAll"),
-    getById: (itemId: string) => callCcfolia<any>("tokens.getById", itemId),
-    toggleInspector: () => callCcfolia<void>("tokens.toggleInspector")
-  }
+    getAll: () => ccfoliaRPC<any[]>("tokens.getAll"),
+    getById: (itemId: string) => ccfoliaRPC<any>("tokens.getById", itemId),
+    toggleInspector: () => ccfoliaRPC<void>("tokens.toggleInspector")
+  },
+  getAllTokens: () => ccfoliaRPC<any[]>("tokens.getAll")
 }
-
-// 사용 예시 (개발 시 주석 처리 또는 테스트용 파일로 분리)
-// setTimeout(async () => {
-//   const chars = await apiConfig.getCharacters("all");
-//   console.log("Fetched via strongly-typed RPC:", chars);
-//
-//   const items = await apiConfig.items.getAll();
-//   console.log("Room Items:", items);
-// }, 5000);

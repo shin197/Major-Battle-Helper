@@ -51,7 +51,12 @@ function installRpcBridge() {
         throw new Error(`${data.method} is not a function`)
 
       const value = await targetFn.apply(parentObj, data.args)
-      reply({ id: data.id, type: "ccfolia:result", ok: true, value })
+
+      const safeValue =
+        value !== undefined ? JSON.parse(JSON.stringify(value)) : undefined
+
+      // reply({ id: data.id, type: "ccfolia:result", ok: true, value })
+      reply({ id: data.id, type: "ccfolia:result", ok: true, value: safeValue })
     } catch (e: any) {
       reply({
         id: data.id,

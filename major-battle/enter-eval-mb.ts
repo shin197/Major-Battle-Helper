@@ -1,4 +1,4 @@
-import { apiConfig } from "~contents/ccfolia-api"
+import { ccf } from "~contents/ccfolia-api"
 import { handleStatCommand, transformMessage } from "~contents/enter-eval"
 import { getCurrentCharacterName } from "~contents/slot-shortcut"
 import { showToast } from "~contents/toast"
@@ -30,8 +30,7 @@ export async function handleCtrlEnter(ev: KeyboardEvent) {
 
   try {
     // 1. 캐릭터 데이터 가져오기
-    const character = await apiConfig.getChar(charName)
-    // callCcfolia<CcfoliaCharacter>("getChar", charName)
+    const character = await ccf.getCharacterByName(charName)
 
     if (!character) {
       console.warn(`[Major Battle Helper] Character not found: ${charName}`)
