@@ -1,7 +1,9 @@
 import { uuid } from "~utils/utils"
 
-
-export function callCcfolia<T = any>(method: string, ...args: any[]): Promise<T> {
+export function callCcfolia<T = any>(
+  method: string,
+  ...args: any[]
+): Promise<T> {
   const id = uuid()
 
   return new Promise<T>((resolve, reject) => {
@@ -18,25 +20,21 @@ export function callCcfolia<T = any>(method: string, ...args: any[]): Promise<T>
 
     window.addEventListener("message", onMsg)
 
-    window.postMessage(
-      { id, type: "ccfolia:call", method, args },
-      "*"
-    )
+    window.postMessage({ id, type: "ccfolia:call", method, args }, "*")
 
     // 옵션: 타임아웃
     setTimeout(() => {
       window.removeEventListener("message", onMsg)
       reject(new Error("ccfolia RPC timeout"))
-    }, 5000)
+    }, 10000)
   })
 }
 
 setTimeout(() => {
-    // callCcfolia("setStatus", "크시카", "HP", 1);
-    // callCcfolia("inspect", "크시카");
-    callCcfolia("getCharacters", "all").then(chars => {
-      console.log("Characters:", chars);
-    });
+  // callCcfolia("setStatus", "크시카", "HP", 1);
+  // callCcfolia("inspect", "크시카");
+  callCcfolia("getCharacters", "all").then((chars) => {
+    console.log("Characters:", chars)
+  })
 }, 5000)
 // 사용 예시
-

@@ -560,6 +560,7 @@ function initCCfoliaAPI() {
       getAll: () => {
         const { store } = getServices()
         const state = store.getState()
+        console.log(state)
         const roomItems = state.entities.roomItems
         if (!roomItems) return []
 
@@ -597,6 +598,73 @@ function initCCfoliaAPI() {
           console.log(
             "%c[API] 🕵️‍♂️ 아이템 인스펙터 ON - 아이템 위에 마우스를 올리세요.",
             "color: lime"
+          )
+        }
+      }
+    },
+
+    tokens: {
+      getAll: () => {
+        const { store } = getServices()
+        const state = store.getState()
+        const roomId = state.app.state.roomId
+        const roomItems = state.entities.roomItems
+        const roomDecks = state.entities.roomDecks
+        const roomDices = state.entities.roomDices
+        const roomCharacters = state.entities.roomCharacters
+        const roomMarkers = Object.keys(
+          state.entities.rooms.entities[roomId].markers || {}
+        )
+
+        const tokens = [
+          ...roomItems.ids.map((id: string) => roomItems.entities[id]),
+          ...roomDecks.ids.map((id: string) => roomDecks.entities[id]),
+          ...roomDices.ids.map((id: string) => roomDices.entities[id]),
+          ...roomCharacters.ids.map(
+            (id: string) => roomCharacters.entities[id]
+          ),
+          ...roomMarkers
+        ]
+        return tokens
+      },
+
+      /**
+       * 2. 특정 ID의 토큰(아이템, 덱, 다이스, 캐릭터, 마커) 정보 가져오기
+       */
+      getById: (itemId: string) => {
+        const { store } = getServices()
+        const state = store.getState()
+        const roomId = state.app.state.roomId
+
+        // getAll()에서 참조하는 5곳의 엔티티 그룹에서 순차적으로 ID를 조회합니다.
+        return (
+          state.entities.roomItems?.entities[itemId] ||
+          state.entities.roomDecks?.entities[itemId] ||
+          state.entities.roomDices?.entities[itemId] ||
+          state.entities.roomCharacters?.entities[itemId] ||
+          state.entities.rooms?.entities[roomId]?.markers?.[itemId] ||
+          null
+        )
+      },
+
+      /**
+       * 3. 마우스 호버링 토큰 인스펙터 (토글)
+       */
+      toggleInspector: () => {
+        if ((window as any).__CCFOLIA_TOKEN_INSPECTOR_ACTIVE) {
+          // 끄기
+          document.removeEventListener("mousemove", tokenHoverHandler)
+          document.removeEventListener("click", tokenClickHandler)
+          ;(window as any).__CCFOLIA_TOKEN_INSPECTOR_ACTIVE = false
+          console.log("%c[API] 🕵️‍♂️ 토큰 인스펙터 OFF", "color: gray")
+        } else {
+          // 켜기
+          document.addEventListener("mousemove", tokenHoverHandler)
+          document.addEventListener("click", tokenClickHandler)
+          ;(window as any).__CCFOLIA_TOKEN_INSPECTOR_ACTIVE = true
+          console.log(
+            "%c[API] 🕵️‍♂️ 토큰 인스펙터 ON - 캐릭터/다이스/덱/아이템 위에 마우스를 올리세요.",
+            "color: #ff9900"
           )
         }
       }
@@ -682,6 +750,70 @@ function initCCfoliaAPI() {
        */
       listAll: () => {
         console.log("Available Modules:", Object.keys(window.webpackRequire.m))
+      },
+
+      /**
+       * 4. [NEW] React Local State 스니퍼
+       * 사용법: 마우스를 요소에 올린 뒤 콘솔에서 ccfoliaAPI.devtools.inspectLocalState() 실행
+       */
+      inspectLocalState: () => {
+        // 현재 마우스가 올라간 DOM 요소를 찾습니다 (hover.js 같은 로직 응용)
+        const hoveredElement = document.querySelector(":hover")
+        if (!hoveredElement) {
+          console.log("마우스를 화면의 요소 위에 올려두고 다시 실행해주세요.")
+          return
+        }
+
+        // DOM에서 가장 깊숙한(마지막으로 마우스가 닿은) 요소 찾기
+        const elements = document.querySelectorAll(":hover")
+        const targetDom = elements[elements.length - 1] as HTMLElement
+
+        const findFiber = (dom: HTMLElement) => {
+          const key = Object.keys(dom).find((k) =>
+            k.startsWith("__reactFiber$")
+          )
+          return key ? (dom as any)[key] : null
+        }
+
+        console.group(`🕵️‍♂️ React Local State Inspector`)
+        let node = findFiber(targetDom)
+        let depth = 0
+
+        // 부모 컴포넌트로 5단계만 거슬러 올라가며 탐색합니다.
+        while (node && depth < 12) {
+          const compName =
+            node.type?.name ||
+            (typeof node.type === "string" ? node.type : "Unknown")
+          console.groupCollapsed(`[Depth ${depth}] Component: <${compName}>`)
+
+          // 1. Props 출력 (부모가 준 데이터)
+          console.log("🎁 Props:", node.memoizedProps)
+
+          // 2. Local State 출력 (스스로 관리하는 데이터)
+          if (node.memoizedState) {
+            // Hooks 기반 함수형 컴포넌트인지 판별
+            if (node.memoizedState.memoizedState !== undefined) {
+              console.log("🧠 Local State (Hooks LinkedList):")
+              let hook = node.memoizedState
+              let index = 0
+              while (hook) {
+                console.log(`  └─ Hook[${index}]:`, hook.memoizedState)
+                hook = hook.next
+                index++
+              }
+            } else {
+              // 클래스형 컴포넌트인 경우 (보통 객체 형태라 보기 편함)
+              console.log("🧠 Local State (Class Object):", node.memoizedState)
+            }
+          } else {
+            console.log("🧠 Local State: None")
+          }
+
+          console.groupEnd()
+          node = node.return // 부모로 이동
+          depth++
+        }
+        console.groupEnd()
       }
     }
   }
@@ -692,7 +824,6 @@ function initCCfoliaAPI() {
     return key ? dom[key] : null
   }
 
-  // React Fiber 트리를 타고 올라가며 itemId를 가진 컴포넌트 찾기
   const findItemIdFromDom = (target: HTMLElement | null): string | null => {
     let curr = target
     while (curr && curr !== document.body) {
@@ -700,15 +831,26 @@ function initCCfoliaAPI() {
       if (fiber) {
         let node = fiber
         while (node) {
-          // 1. props에 item 객체가 통째로 있는 경우
-          if (node.memoizedProps?.item?._id) return node.memoizedProps.item._id
-          // 2. props에 itemId가 있는 경우
-          if (node.memoizedProps?.itemId) return node.memoizedProps.itemId
-          // 3. 'item-id' 같은 data attribute가 있는 경우
-          if (node.memoizedProps?.["data-item-id"])
-            return node.memoizedProps["data-item-id"]
+          const props = node.memoizedProps
+          if (props) {
+            // 1. ID 값만 넘겨받는 경우
+            const idFromProp =
+              props.itemId ||
+              props.characterId ||
+              props.diceId ||
+              props.deckId ||
+              props.markerId
 
-          node = node.return // 부모 노드로 이동
+            if (idFromProp) return idFromProp
+
+            // 2. draggableId 방식 추가!
+            if (props.draggableId && typeof props.draggableId === "string") {
+              // 여기서 id를 반환합니다.
+              return props.draggableId
+            }
+          }
+
+          node = node.return // 부모 컴포넌트로 이동
         }
       }
       curr = curr.parentElement
@@ -751,36 +893,51 @@ function initCCfoliaAPI() {
     }
   }
 
+  // ==========================================
+  // [NEW] Tokens 인스펙터 전용 핸들러
+  // ==========================================
+  let lastHoveredTokenId: string | null = null
+
+  const tokenHoverHandler = (e: MouseEvent) => {
+    const target = e.target as HTMLElement
+    const itemId = findItemIdFromDom(target)
+
+    if (itemId && itemId !== lastHoveredTokenId) {
+      lastHoveredTokenId = itemId
+      const token = window.ccfoliaAPI.tokens.getById(itemId)
+
+      if (token) {
+        console.log(
+          `%c[Found Token] ${token.name || "No Name"} (${itemId})`,
+          "color: #ff9900",
+          token
+        )
+
+        // 시각적 피드백
+        target.style.outline = "2px solid #ff9900"
+        setTimeout(() => (target.style.outline = ""), 500)
+      }
+    }
+  }
+
+  const tokenClickHandler = (e: MouseEvent) => {
+    // 클릭 시 해당 토큰 정보 고정 출력 (Deep copy)
+    const target = e.target as HTMLElement
+    const itemId = findItemIdFromDom(target)
+    if (itemId) {
+      const token = window.ccfoliaAPI.tokens.getById(itemId)
+      if (token) {
+        console.log(
+          `%c[Clicked Token] ${itemId}`,
+          "color: #ff3300; font-weight:bold;",
+          JSON.parse(JSON.stringify(token))
+        )
+      }
+    }
+  }
+
   installCcfoliaRpcBridge()
   console.log("%c[CCFOLIA-API] 인젝트 완료")
-
-  // --- 7. 테스트 코드 (요청하신 부분) ---
-  // 페이지 로드 3초 후 실행됩니다.
-  // setTimeout(async () => {
-  //   console.log("[CCFOLIA-API] 10초 경과: 테스트 자동 실행 시도...")
-
-  //   // ★ 여기에 테스트하고 싶은 캐릭터 이름을 적으세요
-  //   const targetName = "크시카"
-
-  //   try {
-  //       const char = window.ccfoliaAPI.getChar(targetName)
-  //       if (char) {
-  //           console.log(`[TEST] 타겟 발견: ${char.name}`)
-
-  //           // 예시: HP를 1 깎습니다.
-  //           // await window.ccfoliaAPI.setStatus(targetName, "HP", -1)
-
-  //           // 예시: 투명화를 토글해봅니다. (필요없으면 주석처리)
-  //           // await window.ccfoliaAPI.toggleProp(targetName, "invisible")
-
-  //           console.log("[TEST] 테스트 동작 완료!")
-  //       } else {
-  //           console.warn(`[TEST] 이름에 '${targetName}'가 포함된 캐릭터를 찾지 못했습니다.`)
-  //       }
-  //   } catch (e) {
-  //       console.error("[TEST] 테스트 중 에러 발생:", e)
-  //   }
-  // }, 10000)
 }
 
 // 실행
