@@ -1,8 +1,6 @@
 import type { PlasmoCSConfig } from "plasmo"
 
-import { waitFor } from "~utils/wait-for"
-
-import { extractCharacterData } from "./character-data"
+import { callCcfolia } from "./ccfolia-api"
 import { showToast } from "./toast"
 
 export const config: PlasmoCSConfig = {
@@ -18,14 +16,9 @@ const ITEM_CLASS = "MuiButtonBase-root MuiMenuItem-root MuiMenuItem-gutters" //
 const LABEL = "표정 복사"
 
 function isCharacterMenu(ul: HTMLUListElement): boolean {
-  /* ① “ID 복사(개발자용)” 가 들어 있는 <li> 가 하나라도 있는가? */
   const hasIdCopyItem = [...ul.querySelectorAll("li")].some((li) =>
     li.textContent?.trim().includes("ID 복사(개발자용)")
   )
-
-  /* ② 이미 우리가 넣은 ‘표정 복사’ 자체를 만나도 true 가 되지 않게 */
-  // const isHelperItem = (li: Element) =>
-  //   (li as HTMLElement).dataset.helper === "copy-expression"
 
   return hasIdCopyItem //&& ![...ul.querySelectorAll("li")].every(isHelperItem)
 }
@@ -87,14 +80,6 @@ function injectMenuItem(paper: HTMLElement) {
   /* ── ① 샘플 클래스를 런타임에 추출 ────────────────── */
   const sampleLi = ul.querySelector("li[role='menuitem']")
   const liClass = sampleLi?.className ?? ITEM_CLASS // fallback은 기존 하드코드
-
-  // const sampleHr = ul.querySelector("hr")
-  // const hrClass = sampleHr?.className ?? "MuiDivider-root"
-
-  // const hr = document.createElement("hr")
-  // hr.className = hrClass //"MuiDivider-root MuiDivider-fullWidth css-1px5dlw" //
-  // hr.style.margin = "8px 0"
-
   const li = document.createElement("li")
   li.className = liClass //ITEM_CLASS
   li.tabIndex = -1
@@ -103,82 +88,47 @@ function injectMenuItem(paper: HTMLElement) {
 
   li.textContent = LABEL
 
-  li.addEventListener("click", async (e) => {
-    e.stopPropagation()
-
-    /* 1. 현 메뉴 UL 안에서 '편집' 항목 찾기 & 클릭 */
-    const editLi = Array.from(ul.children).find((n) =>
-      n.textContent?.trim().startsWith("편집")
-    ) as HTMLElement | undefined
-
-    if (!editLi) {
-      showToast("❗ '편집' 메뉴를 찾지 못했습니다.")
-      return
-    }
-    editLi.click() // 편집 창 열기
-
-    /* 2. 편집 다이얼로그 등장 대기 (최대 2초) */
-    const dialog = await waitFor<HTMLDivElement>(
-      'div.MuiDialog-paper[role="dialog"]', // ← 이 셀렉터로만 기다린다
-      { timeout: 3000 } // (필요하면 시간 조정)
-    )
-    if (!dialog) {
-      showToast("❗ 캐릭터 편집 창을 찾지 못했습니다.")
-      return
-    }
-
-    /* ------------------------------------------------------------------
-    1) 편집 다이얼로그(dialog) 안의 <form> → 두 번째 <div> = 스탠딩
-  ------------------------------------------------------------------ */
-
-    // console.log(dialog)
-
-    const characterData = extractCharacterData(dialog, true)
-
-    // console.log(characterData)
-
-    const data = {
-      iconUrl: characterData.iconUrl,
-      faces: characterData.faces
-    }
-    // const data = { iconUrl, faces } // 전체 객체
-
-    let jsonText = JSON.stringify(data) // {"iconUrl": "...", "faces":[...]}
-      .replace(/^\{|\}$/g, "") // 🗑️ 맨 앞 {, 맨 뒤 } 제거
-      .replace(/\n/g, "") // 줄바꿈 제거
-
-    /* 5. 클립보드 복사 + 토스트 */
-    await navigator.clipboard.writeText(jsonText)
-    showToast("표정 데이터가 클립보드에 복사되었습니다.")
-
-    /* 메뉴 & 다이얼로그 닫기(선택) ------------------------------ */
-    document.dispatchEvent(new MouseEvent("mousedown", { bubbles: true })) // 메뉴 닫기
-    // 이미 열린 다이얼로그를 닫고 싶다면:
-    // dialog.querySelector<HTMLButtonElement>('button[aria-label="Close"]')?.click()
-
-    // /* 6) 편집 창 닫기 -------------------------------------------------- */
-    // const closeBtn =
-    //   dialog
-    //     .querySelector('header svg[data-testid="CloseIcon"]')  // 아이콘
-    //     ?.closest<HTMLButtonElement>("button")                 // → 버튼
-    //   || dialog.querySelector<HTMLButtonElement>("header button:first-of-type")
-
-    // closeBtn?.click()       // 버튼이 있으면 클릭
-    // /* --------------------------------------------------------------- */
-  })
-
   const idCopyItem = Array.from(ul.children).find((n) =>
     n.textContent?.trim().startsWith("ID 복사")
-  )
+  ) as HTMLElement | undefined
   if (idCopyItem) {
-    // ul.insertBefore(hr, idCopyItem.nextSibling)
-    // ul.insertBefore(li, hr.nextSibling)
-    // ul.insertBefore(hr, )
+    li.addEventListener("click", async (e) => {
+      e.stopPropagation()
+      // ID 복사 메뉴 클릭 (코코포리아 기본 기능: 클립보드에 ID 복사 후 메뉴 닫힘)
+      idCopyItem.click()
+      try {
+        // await new Promise((res) => setTimeout(res, 50))
+        const charId = await navigator.clipboard.readText()
+
+        if (!charId) {
+          showToast("❗ 캐릭터 ID를 가져오지 못했습니다.")
+          return
+        }
+        /* 3. ccfoliaAPI를 통해 캐릭터 데이터 직접 가져오기 */
+        const characterData = await callCcfolia<any>("getCharacterById", charId)
+        if (!characterData) {
+          showToast("❗ 캐릭터 데이터를 불러오지 못했습니다.")
+          return
+        }
+        /* 4. 필요한 표정 데이터만 추출하여 JSON 포맷팅 */
+        const data = {
+          iconUrl: characterData.iconUrl || "",
+          faces: characterData.faces || []
+        }
+        let jsonText = JSON.stringify(data)
+          .replace(/^\{|\}$/g, "") // 🗑️ 맨 앞 {, 맨 뒤 } 제거
+          .replace(/\n/g, "") // 줄바꿈 제거
+
+        /* 5. 클립보드에 캐릭터 ID 대신 완성된 표정 데이터로 덮어쓰기 */
+        await navigator.clipboard.writeText(jsonText)
+        showToast("표정 데이터가 클립보드에 복사되었습니다.")
+      } catch (err) {
+        console.error("표정 복사 중 오류:", err)
+        showToast("❗ 데이터를 복사하는 중 오류가 발생했습니다.")
+      }
+    })
     ul.insertBefore(li, idCopyItem.nextSibling)
   } else {
-    // ul.append(hr, li) // 못 찾으면 맨 끝
     ul.append(li) // 못 찾으면 맨 끝
   }
-
-  // console.log("[MBH] 표정 복사 메뉴 추가")
 }

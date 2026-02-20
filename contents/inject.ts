@@ -375,6 +375,11 @@ function initCCfoliaAPI() {
         .find((c: CcfoliaCharacter) => c.name?.includes(namePart))
     },
 
+    getCharacterById: (charId: string): CcfoliaCharacter | undefined => {
+      const { rc } = getServices()
+      return rc.entities[charId]
+    },
+
     /**
      * 캐릭터의 특정 스테이터스(HP, MP, SAN 등) 값 변경
      * - namePart: 캐릭터 이름
@@ -546,60 +551,6 @@ function initCCfoliaAPI() {
         )
         await setDoc(targetRef, updatePayload, { merge: true })
         console.log(`[API] Updated ${target.name}:`, updates)
-      }
-    },
-
-    /**
-     * [NEW] 룸 아이템(스크린 패널, 마커 등) 관련 API
-     */
-    items: {
-      /**
-       * 1. 현재 룸의 모든 아이템 리스트 가져오기
-       * - provided file의 'state.entities.roomItems.entities' 참조
-       */
-      getAll: () => {
-        const { store } = getServices()
-        const state = store.getState()
-        console.log(state)
-        const roomItems = state.entities.roomItems
-        if (!roomItems) return []
-
-        // 정렬된 ID 순서대로 객체 배열 반환 (Z-index 순서일 가능성 높음)
-        // provided file의 'getSortedRoomItemIds' 로직 대체
-        return roomItems.ids.map((id: string) => roomItems.entities[id])
-      },
-
-      /**
-       * 2. 특정 ID의 아이템 정보 가져오기
-       */
-      getById: (itemId: string) => {
-        const { store } = getServices()
-        const state = store.getState()
-        return state.entities.roomItems.entities[itemId]
-      },
-
-      /**
-       * 3. 마우스 호버링 인스펙터 (토글)
-       * 실행하면 마우스를 움직일 때마다 콘솔에 해당 위치의 아이템 정보를 띄웁니다.
-       * 다시 실행하면 꺼집니다.
-       */
-      toggleInspector: () => {
-        if ((window as any).__CCFOLIA_INSPECTOR_ACTIVE) {
-          // 끄기
-          document.removeEventListener("mousemove", hoverHandler)
-          document.removeEventListener("click", clickHandler)
-          ;(window as any).__CCFOLIA_INSPECTOR_ACTIVE = false
-          console.log("%c[API] 🕵️‍♂️ 아이템 인스펙터 OFF", "color: gray")
-        } else {
-          // 켜기
-          document.addEventListener("mousemove", hoverHandler)
-          document.addEventListener("click", clickHandler)
-          ;(window as any).__CCFOLIA_INSPECTOR_ACTIVE = true
-          console.log(
-            "%c[API] 🕵️‍♂️ 아이템 인스펙터 ON - 아이템 위에 마우스를 올리세요.",
-            "color: lime"
-          )
-        }
       }
     },
 
@@ -818,81 +769,6 @@ function initCCfoliaAPI() {
     }
   }
 
-  const findReactProps = (dom: HTMLElement): any => {
-    const key = Object.keys(dom).find((k) => k.startsWith("__reactFiber$"))
-    // @ts-ignore
-    return key ? dom[key] : null
-  }
-
-  const findItemIdFromDom = (target: HTMLElement | null): string | null => {
-    let curr = target
-    while (curr && curr !== document.body) {
-      const fiber = findReactProps(curr)
-      if (fiber) {
-        let node = fiber
-        while (node) {
-          const props = node.memoizedProps
-          if (props) {
-            // 1. ID 값만 넘겨받는 경우
-            const idFromProp =
-              props.itemId ||
-              props.characterId ||
-              props.diceId ||
-              props.deckId ||
-              props.markerId
-
-            if (idFromProp) return idFromProp
-
-            // 2. draggableId 방식 추가!
-            if (props.draggableId && typeof props.draggableId === "string") {
-              // 여기서 id를 반환합니다.
-              return props.draggableId
-            }
-          }
-
-          node = node.return // 부모 컴포넌트로 이동
-        }
-      }
-      curr = curr.parentElement
-    }
-    return null
-  }
-
-  let lastHoveredId: string | null = null
-
-  const hoverHandler = (e: MouseEvent) => {
-    const target = e.target as HTMLElement
-    const itemId = findItemIdFromDom(target)
-
-    if (itemId && itemId !== lastHoveredId) {
-      lastHoveredId = itemId
-      const item = window.ccfoliaAPI.items.getById(itemId)
-      console.log(
-        `%c[Found] ${item.name || "No Name"} (${itemId})`,
-        "color: cyan",
-        item
-      )
-
-      // 시각적 피드백 (선택사항: 테두리 표시 등)
-      target.style.outline = "2px solid cyan"
-      setTimeout(() => (target.style.outline = ""), 500)
-    }
-  }
-
-  const clickHandler = (e: MouseEvent) => {
-    // 클릭 시 해당 아이템 정보 고정 출력 (Deep copy)
-    const target = e.target as HTMLElement
-    const itemId = findItemIdFromDom(target)
-    if (itemId) {
-      const item = window.ccfoliaAPI.items.getById(itemId)
-      console.log(
-        `%c[Clicked] ${itemId}`,
-        "color: yellow; font-weight:bold;",
-        JSON.parse(JSON.stringify(item))
-      )
-    }
-  }
-
   // ==========================================
   // [NEW] Tokens 인스펙터 전용 핸들러
   // ==========================================
@@ -942,6 +818,46 @@ function initCCfoliaAPI() {
 
 // 실행
 initCCfoliaAPI()
+
+const findReactProps = (dom: HTMLElement): any => {
+  const key = Object.keys(dom).find((k) => k.startsWith("__reactFiber$"))
+  // @ts-ignore
+  return key ? dom[key] : null
+}
+
+const findItemIdFromDom = (target: HTMLElement | null): string | null => {
+  let curr = target
+  while (curr && curr !== document.body) {
+    const fiber = findReactProps(curr)
+    if (fiber) {
+      let node = fiber
+      while (node) {
+        const props = node.memoizedProps
+        if (props) {
+          // 1. ID 값만 넘겨받는 경우
+          const idFromProp =
+            props.itemId ||
+            props.characterId ||
+            props.diceId ||
+            props.deckId ||
+            props.markerId
+
+          if (idFromProp) return idFromProp
+
+          // 2. draggableId 방식 추가!
+          if (props.draggableId && typeof props.draggableId === "string") {
+            // 여기서 id를 반환합니다.
+            return props.draggableId
+          }
+        }
+
+        node = node.return // 부모 컴포넌트로 이동
+      }
+    }
+    curr = curr.parentElement
+  }
+  return null
+}
 
 type CcReq =
   | {
