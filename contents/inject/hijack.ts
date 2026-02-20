@@ -52,6 +52,8 @@ export function getServices() {
   const fsTools = resolveFirestoreTools(req)
   const db = resolveDb(req)
   const selectors = resolveSelectors(req)
+  const roomItemActions = resolveRoomActions(req)
+  const roomActions = resolveRoomActions(req) // 👈 마커/룸 액션 탈취
 
   const state = store.getState()
   const roomId = state.app?.state?.roomId
@@ -60,7 +62,17 @@ export function getServices() {
   if (!roomId || !rc)
     throw new Error("방 데이터(RoomID/Characters)를 읽을 수 없습니다.")
 
-  return { store, req, fsTools, db, selectors, roomId, rc }
+  return {
+    store,
+    req,
+    fsTools,
+    db,
+    selectors,
+    roomItemActions,
+    roomActions,
+    roomId,
+    rc
+  }
 }
 
 // --- 3. 모듈 탐색 로직 (기존 작동 코드 유지) ---
@@ -200,4 +212,106 @@ function pickSelectors(mod: any) {
     typeof mod.getRoomCharacterIds === "function" &&
     typeof mod.getCharacterById === "function"
   )
+}
+
+function resolveRoomItemActions(req: any) {
+  window.__CCFOLIA_MOD_CACHE__ ??= {}
+
+  // 0. 캐시 확인
+  const cachedId = window.__CCFOLIA_MOD_CACHE__.riaId
+  if (cachedId != null) {
+    try {
+      const mod = req(cachedId)
+      if (pickRoomItemActions(mod)) return mod
+    } catch {}
+  }
+
+  // 1. 알려진 ID(15290) 먼저 시도 (빠른 로딩)
+  try {
+    const mod = req(15290)
+    if (pickRoomItemActions(mod)) {
+      window.__CCFOLIA_MOD_CACHE__.riaId = 15290
+      return mod
+    }
+  } catch {}
+
+  // 2. 동적 탐색 (업데이트 대비 Fallback)
+  const tcId = findModuleIdByExportShape(
+    req,
+    (mod) => !!pickRoomItemActions(mod)
+  )
+  if (tcId != null) {
+    window.__CCFOLIA_MOD_CACHE__.riaId = tcId
+    return req(tcId)
+  }
+
+  return null
+}
+
+function pickRoomItemActions(mod: any) {
+  if (!mod || typeof mod !== "object") return null
+
+  // 1. Webpack이 함수 이름을 보존한 경우
+  if (typeof mod.addRoomItem === "function") return mod
+
+  // 2. 난독화되어 이름이 바뀐 경우, 내부 문자열(Signature)로 탐색
+  for (const key of Object.keys(mod)) {
+    const val = mod[key]
+    if (typeof val === "function") {
+      const fnStr = val.toString()
+      // 코코포리아의 addRoomItem 함수만이 가지는 고유한 특징 문자열
+      if (fnStr.includes('"update-item"') || fnStr.includes("getMaxZIndex")) {
+        return mod
+      }
+    }
+  }
+  return null
+}
+
+function resolveRoomActions(req: any) {
+  window.__CCFOLIA_MOD_CACHE__ ??= {}
+
+  // 0. 캐시 확인
+  const cachedId = window.__CCFOLIA_MOD_CACHE__.raId
+  if (cachedId != null) {
+    try {
+      const mod = req(cachedId)
+      if (pickRoomActions(mod)) return mod
+    } catch {}
+  }
+
+  // 1. 알려진 ID(69019) 먼저 시도
+  try {
+    const mod = req(69019)
+    if (pickRoomActions(mod)) {
+      window.__CCFOLIA_MOD_CACHE__.raId = 69019
+      return mod
+    }
+  } catch {}
+
+  // 2. 동적 탐색 (업데이트 대비 Fallback)
+  // 원본 함수 내부에 있는 고유한 문자열 '"update-marker"'를 추적 단서로 사용합니다.
+  const raId = findModuleIdByExportShape(req, pickRoomActions)
+  if (raId != null) {
+    window.__CCFOLIA_MOD_CACHE__.raId = raId
+    return req(raId)
+  }
+
+  return null
+}
+
+function pickRoomActions(mod: any) {
+  if (!mod || typeof mod !== "object") return null
+
+  if (typeof mod.addRoomMarker === "function") return mod
+
+  // 난독화된 경우 내부 문자열로 탐색
+  for (const key of Object.keys(mod)) {
+    const val = mod[key]
+    if (typeof val === "function") {
+      const fnStr = val.toString()
+      if (fnStr.includes('"update-marker"')) return mod
+    }
+  }
+  return null
 }

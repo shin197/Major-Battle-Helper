@@ -35,4 +35,61 @@ setTimeout(async () => {
     // 🚨 에러가 발생하면 여기서 정확한 원인을 출력해 줍니다.
     console.error("❌ RPC 호출 중 에러 발생:", error)
   }
+
+  // try {
+  //   const tokenId = "1993f37cb7a" // 예: "199413f3a0b"
+
+  //   // x 좌표와 y 좌표 변경 테스트
+  //   await ccf.tokens.patch(tokenId, {
+  //     x: 10,
+  //     y: 10,
+  //     width: 2, // 필요하다면 크기도 변경 가능!
+  //     height: 2
+  //   })
+
+  //   console.log("토큰 이동 성공!")
+  // } catch (e) {
+  //   console.error("패치 실패:", e)
+  // }
+
+  try {
+    console.log("🛠️ 토큰 생성/삭제 테스트 시작")
+
+    // 1. 스크린 패널(roomItem) 생성
+    // (이미지 url은 현재 룸에 업로드된 아무 이미지 URL이나 넣으시면 됩니다)
+    // const newPanelId = await ccf.tokens.create("roomItem", {
+    //   x: 10,
+    //   y: 10,
+    //   z: 1,
+    //   width: 2,
+    //   height: 2,
+    //   imageUrl:
+    //     "https://storage.ccfolia-cdn.net/users/WVlt9khBkddLydSXu6Gn0unTgYj2/files/78f8a058dae473e89f593ece446dbbf11b88bc2d52f80fe26394eefc303b6b26" // 임시 이미지
+    // })
+    // console.log("✅ 생성된 패널 ID:", newPanelId)
+    const newMarkerId = await ccf.tokens.create("roomMarker", {
+      x: 0,
+      y: 0,
+      z: 1,
+      width: 2,
+      height: 2,
+      imageUrl:
+        "https://storage.ccfolia-cdn.net/users/WVlt9khBkddLydSXu6Gn0unTgYj2/files/78f8a058dae473e89f593ece446dbbf11b88bc2d52f80fe26394eefc303b6b26" // 임시 이미지
+    })
+    console.log("✅ 생성된 마커 ID:", newMarkerId)
+
+    // // 2. 2초 뒤에 위치 이동 (Patch 테스트)
+    // setTimeout(async () => {
+    //   await ccf.tokens.patch(newPanelId, { x: 15, y: 15 })
+    //   console.log("✅ 패널 이동 완료")
+    // }, 2000)
+
+    // 3. 4초 뒤에 삭제 (Delete 테스트)
+    // setTimeout(async () => {
+    //   await ccf.tokens.delete(newPanelId)
+    //   console.log("✅ 패널 삭제 완료")
+    // }, 4000)
+  } catch (error) {
+    console.error("❌ 테스트 중 에러:", error)
+  }
 }, 5000)

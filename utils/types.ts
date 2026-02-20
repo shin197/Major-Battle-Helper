@@ -43,6 +43,8 @@ declare global {
       fsId?: number
       dbId?: number
       selId?: number
+      riaId?: number
+      raId?: number
     }
   }
 }

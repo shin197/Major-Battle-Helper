@@ -1,5 +1,3 @@
-import { get } from "http"
-
 import type { CcfoliaCharacter } from "../utils/types"
 
 function uuid() {
@@ -106,7 +104,18 @@ export const ccf = {
     // 중첩된 객체도 문자열 "items.getAll" 형태로 호출
     getAll: () => ccfoliaRPC<any[]>("tokens.getAll"),
     getById: (itemId: string) => ccfoliaRPC<any>("tokens.getById", itemId),
+    patch: (tokenId: string, updates: Record<string, any>) =>
+      ccfoliaRPC<void>("tokens.patch", tokenId, updates),
+    create: (type: string, payload: any) =>
+      ccfoliaRPC<string>("tokens.create", type, payload),
+    delete: (tokenId: string) => ccfoliaRPC<void>("tokens.delete", tokenId),
     toggleInspector: () => ccfoliaRPC<void>("tokens.toggleInspector")
   },
-  getAllTokens: () => ccfoliaRPC<any[]>("tokens.getAll")
+  getAllTokens: () => ccfoliaRPC<any[]>("tokens.getAll"),
+  patchToken: (tokenId: string, updates: Record<string, any>) =>
+    ccfoliaRPC<void>("tokens.patch", tokenId, updates),
+  getTokenById: (itemId: string) => ccfoliaRPC<any>("tokens.getById", itemId),
+  createToken: (type: string, payload: any) =>
+    ccfoliaRPC<string>("tokens.create", type, payload),
+  deleteToken: (tokenId: string) => ccfoliaRPC<void>("tokens.delete", tokenId)
 }
