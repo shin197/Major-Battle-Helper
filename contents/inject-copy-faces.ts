@@ -1,6 +1,6 @@
 import type { PlasmoCSConfig } from "plasmo"
 
-import { callCcfolia } from "./ccfolia-api"
+import { apiConfig } from "./ccfolia-api"
 import { showToast } from "./toast"
 
 export const config: PlasmoCSConfig = {
@@ -105,7 +105,8 @@ function injectMenuItem(paper: HTMLElement) {
           return
         }
         /* 3. ccfoliaAPI를 통해 캐릭터 데이터 직접 가져오기 */
-        const characterData = await callCcfolia<any>("getCharacterById", charId)
+        // const characterData = await callCcfolia<any>("getCharacterById", charId)
+        const characterData = await apiConfig.getCharacterById(charId)
         if (!characterData) {
           showToast("❗ 캐릭터 데이터를 불러오지 못했습니다.")
           return

@@ -1,39 +1,17 @@
-import { callCcfolia } from "~contents/ccfolia-api"
 import { getCurrentCharacterName } from "~contents/slot-shortcut"
 import type { PlasmoCSConfig } from "~node_modules/plasmo/dist/type"
 import { getChatInputBox } from "~utils/elements"
 import { evaluateMath } from "~utils/eval-math"
+import type { CcfoliaCharacter } from "~utils/types"
 import { setNativeValue } from "~utils/utils"
 
+import { apiConfig } from "./ccfolia-api"
 import { showToast } from "./toast"
 
 export const config: PlasmoCSConfig = {
   matches: ["https://ccfolia.com/rooms/*"],
   run_at: "document_idle",
   all_frames: true
-}
-
-// --- 타입 정의 ---
-export interface CcfoliaStatus {
-  label: string
-  value: number
-  max: number
-}
-
-export interface CcfoliaParam {
-  label: string
-  value: string
-}
-
-export interface CcfoliaCharacter {
-  _id: string
-  name: string
-  status: CcfoliaStatus[]
-  params: CcfoliaParam[]
-  active: boolean
-  secret: boolean
-  invisible: boolean
-  [key: string]: any
 }
 
 /** -----------------------------------------------
@@ -195,11 +173,11 @@ export async function handleStatCommand(
 
   if (hasStatusUpdates || hasParamUpdates) {
     try {
-      await callCcfolia("patchCharacter", character.name, {
+      await apiConfig.patchCharacter(character.name, {
         status: hasStatusUpdates ? statusUpdates : undefined,
         params: hasParamUpdates ? paramUpdates : undefined
       })
-      showToast(`✅ 캐릭터: ${character.name}의 업데이트가 완료되었습니다.`)
+      showToast(`✅ 캐릭터: ${character.name} 의 업데이트가 완료되었습니다.`)
       // console.info(`[BattleHelper] Batch Update applied for ${character.name}`, { statusUpdates, paramUpdates })
     } catch (e) {
       showToast("❌ 캐릭터 업데이트에 실패했습니다.")
@@ -222,7 +200,8 @@ export async function handleCtrlEnter(ev: KeyboardEvent) {
 
   try {
     // 1. 캐릭터 데이터 가져오기
-    const character = await callCcfolia<CcfoliaCharacter>("getChar", charName)
+    const character = await apiConfig.getChar(charName)
+    // callCcfolia<CcfoliaCharacter>("getChar", charName)
 
     if (!character) {
       showToast(`❗ 캐릭터: ${charName} 를 찾을 수 없습니다.`)

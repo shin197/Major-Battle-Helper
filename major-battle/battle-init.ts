@@ -1,6 +1,6 @@
-import { callCcfolia } from "~contents/ccfolia-api"
-import type { CcfoliaCharacter } from "~contents/enter-eval"
+import { apiConfig } from "~contents/ccfolia-api"
 import { showToast } from "~contents/toast"
+import type { CcfoliaCharacter } from "~utils/types"
 
 // --- 타입 정의 (ccfolia-api와 맞춤) ---
 
@@ -19,7 +19,7 @@ const INIT_PAIRS = [
  * ----------------------------------------------------------------*/
 export async function capStatus(mustCap: string[] = []) {
   try {
-    const characters = await callCcfolia<CcfoliaCharacter[]>("getCharacters")
+    const characters = await apiConfig.getCharacters("status")
     if (!characters || characters.length === 0) {
       showToast("❗ 캐릭터를 찾을 수 없습니다.")
       return
@@ -55,7 +55,8 @@ export async function capStatus(mustCap: string[] = []) {
 
       // 변경 사항이 있는 경우 API 호출
       if (Object.keys(statusUpdates).length > 0) {
-        await callCcfolia("patchCharacter", char.name, { status: statusUpdates })
+        await apiConfig.patchCharacter(char.name, { status: statusUpdates })
+        // callCcfolia("patchCharacter", )
         updatedCount++
       }
     }
@@ -65,7 +66,6 @@ export async function capStatus(mustCap: string[] = []) {
     } else {
       showToast("✨ 보정할 스테이터스가 없습니다.")
     }
-
   } catch (e) {
     console.error("[BattleHelper] capStatus Error:", e)
     showToast("❌ 스테이터스 보정 중 오류가 발생했습니다.")
@@ -79,7 +79,8 @@ export async function capStatus(mustCap: string[] = []) {
  * ----------------------------------------------------------------*/
 export async function initBattle() {
   try {
-    const characters = await callCcfolia<CcfoliaCharacter[]>("getCharacters")
+    const characters = await apiConfig.getCharacters("status")
+    // callCcfolia<CcfoliaCharacter[]>("getCharacters")
     if (!characters || characters.length === 0) {
       showToast("❗ 캐릭터를 찾을 수 없습니다.")
       return
@@ -92,12 +93,12 @@ export async function initBattle() {
 
       for (const pair of INIT_PAIRS) {
         // 1. 해당 캐릭터에게 초기화 대상 Status가 있는지 확인
-        const st = char.status.find(s => s.label === pair.status)
+        const st = char.status.find((s) => s.label === pair.status)
         if (!st) continue
 
         // 2. 대응하는 Param(초기값) 찾기
-        const pm = char.params.find(p => p.label === pair.param)
-        
+        const pm = char.params.find((p) => p.label === pair.param)
+
         let initValue = 0
         if (pm) {
           const parsed = parseInt(pm.value, 10)
@@ -114,7 +115,10 @@ export async function initBattle() {
 
       // 변경 사항 적용
       if (Object.keys(statusUpdates).length > 0) {
-        await callCcfolia("patchCharacter", char.name, { status: statusUpdates })
+        await apiConfig.patchCharacter(char.name, {
+          status: statusUpdates
+        })
+        //  callCcfolia("patchCharacter", )
         updatedCount++
       }
     }
@@ -124,7 +128,6 @@ export async function initBattle() {
     } else {
       showToast("✨ 이미 초기화된 상태입니다.")
     }
-
   } catch (e) {
     console.error("[BattleHelper] initBattle Error:", e)
     showToast("❌ 전투 초기화 중 오류가 발생했습니다.")
@@ -136,9 +139,15 @@ export async function initBattle() {
  * - 형식: /dmg [양(amount)] [타입(type)] [횟수(count)]
  * - 예시: /dmg 15 관통폭발 x2
  * ----------------------------------------------*/
-export async function handleDmgCommand(character: CcfoliaCharacter, commandLine: string) {
+export async function handleDmgCommand(
+  character: CcfoliaCharacter,
+  commandLine: string
+) {
   // 1. 인자 파싱 (/dmg 제거 후 공백 기준 분리)
-  const args = commandLine.replace(/^\/dmg\s+/, "").trim().split(/\s+/)
+  const args = commandLine
+    .replace(/^\/dmg\s+/, "")
+    .trim()
+    .split(/\s+/)
   if (args.length === 0 || !args[0]) return
 
   let amount = 0
@@ -159,22 +168,22 @@ export async function handleDmgCommand(character: CcfoliaCharacter, commandLine:
       if (type === "일반") {
         type = arg
       } else {
-        type += arg 
+        type += arg
       }
     }
   }
 
   // 2. 캐릭터의 필요 파라미터 및 스테이터스 조회
-  const armorParam = character.params.find(p => p.label === "장갑")
+  const armorParam = character.params.find((p) => p.label === "장갑")
   const armor = armorParam ? parseInt(armorParam.value, 10) || 0 : 0
 
-  const defStatus = character.status.find(s => s.label === "DEF")
+  const defStatus = character.status.find((s) => s.label === "DEF")
   let def = defStatus ? defStatus.value : 0
 
-  const hpStatus = character.status.find(s => s.label === "HP")
+  const hpStatus = character.status.find((s) => s.label === "HP")
   let hp = hpStatus ? hpStatus.value : 0
 
-  const unitStatus = character.status.find(s => s.label === "#")
+  const unitStatus = character.status.find((s) => s.label === "#")
   const unitCount = unitStatus ? Math.max(1, unitStatus.value) : 1
 
   // 3. 데미지 계산
@@ -185,7 +194,7 @@ export async function handleDmgCommand(character: CcfoliaCharacter, commandLine:
 
   // 충격형 피해라면, 방어도에 50% 적용
   if (type.includes("충격")) {
-    dmg = Math.floor(dmg/2)
+    dmg = Math.floor(dmg / 2)
   }
 
   // 방어도를 피해만큼 차감 (남은 데미지가 0 미만이면 0으로 처리)
@@ -193,9 +202,10 @@ export async function handleDmgCommand(character: CcfoliaCharacter, commandLine:
 
   // 방어도가 0보다 크다면 여기서 종료
   if (def > 0) {
-    await callCcfolia("patchCharacter", character.name, {
+    await apiConfig.patchCharacter(character.name, {
       status: { DEF: Math.floor(def) }
     })
+    //  callCcfolia("patchCharacter", )
     // console.info(`[BattleHelper] DMG Blocked by DEF. DEF remaining: ${Math.floor(def)}`)
     return
   }
@@ -214,13 +224,13 @@ export async function handleDmgCommand(character: CcfoliaCharacter, commandLine:
 
   // 방어도가 음수라면 남은 방어도만큼 HP에서 차감
   hp -= Math.max(0, -def)
-  
+
   // 방어도는 완전히 소모되었으므로 0으로 보정 (마이너스로 두지 않음)
   def = 0
 
   // 마지막으로, 유닛 수가 있다면, HP에 맞춰서 유닛 수 조정
   // 유닛 수가 많을 댸는 HP: 28/16 따위로 max가 cur을 초과한 상태로 표기중.
-  // 이 때 유닛 수(#)는 ceil(cur/max)로 계산한다 (최소 0) 
+  // 이 때 유닛 수(#)는 ceil(cur/max)로 계산한다 (최소 0)
   let kills = 0
   if (unitStatus) {
     const maxUnits = Math.ceil(Math.max(0, hp) / (hpStatus ? hpStatus.max : 1))
@@ -230,14 +240,15 @@ export async function handleDmgCommand(character: CcfoliaCharacter, commandLine:
 
   // 4. API로 최종 적용
   try {
-    await callCcfolia("patchCharacter", character.name, {
-      status: { 
-        DEF: def, 
+    await apiConfig.patchCharacter(character.name, {
+      status: {
+        DEF: def,
         HP: Math.floor(hp),
         "#": unitStatus ? unitStatus.value : 0
       }
     })
-    
+    // callCcfolia("patchCharacter", )
+
     let message = `⚔️ ${character.name}에게 ${amount}`
     let typeMessage = " 피해를"
     let countMessage = " 입혔습니다."
@@ -248,10 +259,10 @@ export async function handleDmgCommand(character: CcfoliaCharacter, commandLine:
       countMessage = ` 총 ${count}회에 걸쳐서 입혔습니다.`
     }
     message += typeMessage + countMessage
-    
-    if(kills >= 2 && unitStatus.value === 0){
+
+    if (kills >= 2 && unitStatus.value === 0) {
       message += ` (전원 처치!)`
-    }else if (kills > 0) {
+    } else if (kills > 0) {
       message += ` (${kills}기 처치)`
     }
     showToast(message)

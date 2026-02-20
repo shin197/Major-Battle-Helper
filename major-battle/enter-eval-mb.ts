@@ -1,9 +1,5 @@
-import { callCcfolia } from "~contents/ccfolia-api"
-import {
-  handleStatCommand,
-  transformMessage,
-  type CcfoliaCharacter
-} from "~contents/enter-eval"
+import { apiConfig } from "~contents/ccfolia-api"
+import { handleStatCommand, transformMessage } from "~contents/enter-eval"
 import { getCurrentCharacterName } from "~contents/slot-shortcut"
 import { showToast } from "~contents/toast"
 import { expandDiceVars } from "~major-battle/dice-var-exp"
@@ -34,7 +30,8 @@ export async function handleCtrlEnter(ev: KeyboardEvent) {
 
   try {
     // 1. 캐릭터 데이터 가져오기
-    const character = await callCcfolia<CcfoliaCharacter>("getChar", charName)
+    const character = await apiConfig.getChar(charName)
+    // callCcfolia<CcfoliaCharacter>("getChar", charName)
 
     if (!character) {
       console.warn(`[Major Battle Helper] Character not found: ${charName}`)
