@@ -2,6 +2,7 @@ import { getServices } from "../hijack"
 
 export const menus = {
   getOpenMenuInfo: (): { type: string; id: string } | null => {
+    // console.log("%c[CCFOLIA-API] getOpenMenuInfo 호출됨", "color: #2196f3")
     const { store } = getServices()
     const state = store.getState().app?.state
     if (!state) return null
@@ -13,7 +14,7 @@ export const menus = {
       {
         type: "character",
         flagKey: "openRoomCharacterMenu",
-        idKey: "openRoomCharacterId"
+        idKey: "openRoomCharacterMenuId"
       },
       {
         type: "deck",

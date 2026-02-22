@@ -121,5 +121,6 @@ export const ccf = {
 
   menus: {
     getOpenMenuInfo: () => ccfoliaRPC<any>("menus.getOpenMenuInfo")
-  }
+  },
+  getOpenMenuInfo: () => ccfoliaRPC<any>("menus.getOpenMenuInfo")
 }

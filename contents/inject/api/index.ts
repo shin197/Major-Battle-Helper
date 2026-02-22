@@ -1,5 +1,3 @@
-import type { get } from "http"
-
 import { characters } from "./characters"
 import { devtools } from "./devtools"
 import { menus } from "./menu"
