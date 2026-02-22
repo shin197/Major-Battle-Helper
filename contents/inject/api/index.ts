@@ -2,6 +2,7 @@ import type { get } from "http"
 
 import { characters } from "./characters"
 import { devtools } from "./devtools"
+import { messages } from "./messages"
 import { tokens } from "./tokens"
 
 export const buildAPI = () => {
@@ -19,6 +20,9 @@ export const buildAPI = () => {
     getAllTokens: tokens.getAll,
     getTokenById: tokens.getById,
     patchToken: tokens.patch,
+    messages,
+    getAllMessages: messages.getAll,
+    modifyRollResult: messages.modifyRollResult,
     devtools
   }
 }

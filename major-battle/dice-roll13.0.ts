@@ -9,12 +9,21 @@ const CHAT_LOG_SEL = "#root div.MuiDrawer-docked > div > ul > div > div"
 const TAB_BAR = "div.MuiTabs-scroller.MuiTabs-hideScrollbar"
 const MAIN_TAB_ID = "main" // 첫 번째 탭의 id(또는 data-value)가 ‘main’
 
+const RESULT_COLORS = {
+  대실패: "#f44336",
+  실패: "#fff",
+  성공: "#29b6f6",
+  강성공: "rgba(177, 35, 243, 1)",
+  대성공: "#f1de0d"
+}
+
 let logObs: MutationObserver | null = null
 
 const DICE_LINE_REGEX = /\(\d+\s*B\s*\d+\)\s*[＞>]\s*[\d,\s]+?\s*$/u
-// [＞>]\s*(?:\[\d+\]×\d+(?:,\s*)?)+\s*
 
 function handleLine(el: HTMLElement, currentBox: HTMLElement) {
+  // return
+
   if (!isMainTabActive()) return
   if (!currentBox.contains(el)) return // 다른 탭으로 옮겨진 줄 skip
   if (el.dataset.helper === "dice-marked") return
@@ -34,10 +43,7 @@ function handleLine(el: HTMLElement, currentBox: HTMLElement) {
   // ③ 주사위 판정인지 검사
   if (!DICE_LINE_REGEX.test(text)) return
 
-  // const text2 = el.textContent ?? ""
   const text2 = getOwnText(el.querySelector("p")) + text
-  // console.log(text2)
-  // if (!DICE_LINE_REGEX.test(text)) return
   const resultText = [
     { color: "#f44336", text: "대실패" },
     { color: "#fff", text: "실패" },
@@ -58,11 +64,7 @@ function handleLine(el: HTMLElement, currentBox: HTMLElement) {
   if (diceResult.passDC != null) {
     badge.textContent += ` ${successText}`
   }
-  // const badge2 = document.createElement("span")
-  // badge2.dataset.helper = "dice-result2"
-  // badge2.style.cssText = `margin-left:.5em;font-weight:${diceResult.crit !== 0 && diceResult.crit !== 1 ? 700 : 400};
-  //                      color:${color}`
-  // ${diceResult.passDC != null ? (diceResult.passDC ? ` 성공` : ` 실패`) : ""}
+
   const diceSpan = el.querySelector<HTMLSpanElement>("p > span")
   diceSpan?.insertAdjacentElement("afterend", badge)
   el.dataset.helper = "dice-marked"
@@ -101,57 +103,139 @@ function handleLine(el: HTMLElement, currentBox: HTMLElement) {
   })
 
   /* -------------------- 함수 정의 -------------------- */
-
-  async function getActiveBtn(root: HTMLElement) {
-    // 이미 선택된 것이 있으면 바로 반환
-    const now = root.querySelector<HTMLButtonElement>(
-      "button[aria-selected='true']"
-    )
-    if (now) return now
-
-    // 없으면 selected 속성이 붙을 때까지 대기
-    return new Promise<HTMLButtonElement>((res) => {
-      const obs = new MutationObserver(() => {
-        const btn = root.querySelector<HTMLButtonElement>(
-          "button[aria-selected='true']"
-        )
-        if (btn) {
-          obs.disconnect()
-          res(btn)
-        }
-      })
-      obs.observe(root, {
-        subtree: true,
-        attributes: true,
-        attributeFilter: ["aria-selected"]
-      })
-    })
-  }
-
-  function attachLogObserver(tabBtn: HTMLButtonElement) {
-    // console.log("[chat] 현재 탭:", tabBtn.textContent?.trim())
-    const logBox = document.querySelector<HTMLElement>(CHAT_LOG_SEL)
-
-    if (!logBox) return console.warn("logBox not found")
-
-    logObs?.disconnect()
-
-    /* 3) 화면에 이미 있는 <li>/<div> 들 먼저 처리 */
-    logBox
-      .querySelectorAll(":scope > *")
-      .forEach((n) => handleLine(n as HTMLElement, logBox))
-
-    /* 4) 이후 들어올 노드 감시 */
-    logObs = new MutationObserver((records) => {
-      records.forEach((r) =>
-        r.addedNodes.forEach((n) => {
-          if (n.nodeType === 1) handleLine(n as HTMLElement, logBox)
-        })
-      )
-    })
-    logObs.observe(logBox, { childList: true })
-  }
 })()
+
+async function getActiveBtn(root: HTMLElement) {
+  // 이미 선택된 것이 있으면 바로 반환
+  const now = root.querySelector<HTMLButtonElement>(
+    "button[aria-selected='true']"
+  )
+  if (now) return now
+
+  // 없으면 selected 속성이 붙을 때까지 대기
+  return new Promise<HTMLButtonElement>((res) => {
+    const obs = new MutationObserver(() => {
+      const btn = root.querySelector<HTMLButtonElement>(
+        "button[aria-selected='true']"
+      )
+      if (btn) {
+        obs.disconnect()
+        res(btn)
+      }
+    })
+    obs.observe(root, {
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["aria-selected"]
+    })
+  })
+}
+
+function attachLogObserver(tabBtn: HTMLButtonElement) {
+  // console.log("[chat] 현재 탭:", tabBtn.textContent?.trim())
+  const logBox = document.querySelector<HTMLElement>(CHAT_LOG_SEL)
+
+  if (!logBox) return console.warn("logBox not found")
+
+  logObs?.disconnect()
+
+  /* 3) 화면에 이미 있는 <li>/<div> 들 먼저 처리 */
+  logBox
+    .querySelectorAll(":scope > *")
+    .forEach((n) => handleLine(n as HTMLElement, logBox))
+
+  /* 4) 이후 들어올 노드 감시 */
+  logObs = new MutationObserver((records) => {
+    records.forEach((r) =>
+      r.addedNodes.forEach((n) => {
+        if (n.nodeType === 1) handleLine(n as HTMLElement, logBox)
+      })
+    )
+  })
+  logObs.observe(logBox, { childList: true })
+}
+
+export async function applyMajorBattleDiceResult(msgId: string, msg: any) {
+  if (process.env.PLASMO_PUBLIC_ENABLE_MAJOR_BATTLE === "false") {
+    return // 기능이 꺼져있으면 아무것도 하지 않음
+  }
+
+  // 1. 코코포리아 원본 데이터 추출
+  const originalFormula = msg.text || ""
+  const originalResult = msg.extend?.roll?.result || ""
+
+  const lines = originalResult.split("\n")
+
+  let hasModifications = false
+
+  // 다중 굴림일 경우 전체 상태를 추적하기 위한 플래그들
+  let overallSuccess = false
+  let overallFailure = false
+  let overallCritical = false
+  let overallFumble = false
+
+  // 해당 줄이 주사위 판정 결과 줄인지 확인하는 정규식 (예: "(2B6) ＞ 1,2")
+  const DICE_LINE_REGEX = /\(\d+\s*B\s*\d+\)\s*[＞>]\s*[\d,\s]+?\s*$/u
+
+  // 💡 2. 각 줄(line)을 순회하며 변환합니다.
+  const newLines = lines.map((line) => {
+    // 주사위 판정 줄이 아니면 (예: "#1", 빈 줄 등) 원본 그대로 반환
+    if (!DICE_LINE_REGEX.test(line)) {
+      return line
+    }
+
+    // calcSuccess가 옵션(msg.text)과 주사위 결과(line)를 모두 읽을 수 있게 임시로 합침
+    const rawLine = `${originalFormula} ${line}`
+    const diceResult = calcSuccess(rawLine)
+
+    if (diceResult.S === null) return line // 파싱 실패 시 원본 유지
+
+    hasModifications = true
+
+    // 뱃지 텍스트 조합
+    const resultTextMap = ["대실패", "실패", "성공", "강성공", "대성공"]
+    const successText = resultTextMap[diceResult.crit + 1] || ""
+
+    let customBadge = `\u{1F3B2}S=${diceResult.S}`
+    if (diceResult.unitCount != null) {
+      customBadge += ` #️⃣${diceResult.unitCount}`
+      if (diceResult.critCount) {
+        customBadge += ` \u{1F4A5}${diceResult.critCount}` // 💥 폭발 이모지
+      }
+    }
+    if (diceResult.unitCount == null) {
+      customBadge += ` ${successText}`
+    }
+
+    // 전체 상태 플래그 갱신 (하나라도 해당되면 true)
+    if (diceResult.crit >= 1) overallSuccess = true
+    if (diceResult.crit === 0) overallFailure = true
+    if (diceResult.crit >= 2) overallCritical = true
+    if (diceResult.crit === -1) overallFumble = true
+
+    // 💡 3. 주사위 결과 줄 끝에 뱃지를 붙여서 반환
+    return `${line} ＞ ${customBadge}`
+  })
+
+  // 바뀐 곳이 없으면(주사위 굴림이 아니면) API 호출 생략
+  if (!hasModifications) return
+
+  // 💡 4. 변환된 줄들을 다시 줄바꿈(\n)으로 합칩니다.
+  const newText = "\n" + newLines.join("\n")
+
+  const options = {
+    success: overallSuccess,
+    failure: overallFailure,
+    critical: true,
+    fumble: overallFumble
+  }
+
+  await window.ccfoliaAPI.messages.modifyRollResult(
+    msgId,
+    newText,
+    options as any
+  )
+}
 
 function calcSuccess(rawLine: string): DiceResult {
   try {
@@ -252,14 +336,15 @@ function calcSuccess(rawLine: string): DiceResult {
         crit = 1
       }
     }
-
-    return {
+    const diceResult = {
       S,
       crit,
       ...(groupified ? { unitCount } : {}),
       ...(hasDC ? { passDC } : {}),
       ...(critCount > 0 ? { critCount } : {})
     }
+    setLastDiceResult(diceResult)
+    return diceResult
   } catch {
     return { S: null, crit: 0 }
   }
@@ -301,10 +386,6 @@ function getOwnText(p: HTMLElement): string {
     .map((n) => n.textContent ?? "")
     .join("")
     .trim()
-}
-
-function unparen(s: string) {
-  return s.trim().replace(/^\((.*)\)$/, "$1")
 }
 
 export function evalArithmetic(exprRaw: string): number {

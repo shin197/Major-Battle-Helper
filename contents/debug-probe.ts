@@ -67,16 +67,16 @@ setTimeout(async () => {
     //     "https://storage.ccfolia-cdn.net/users/WVlt9khBkddLydSXu6Gn0unTgYj2/files/78f8a058dae473e89f593ece446dbbf11b88bc2d52f80fe26394eefc303b6b26" // 임시 이미지
     // })
     // console.log("✅ 생성된 패널 ID:", newPanelId)
-    const newMarkerId = await ccf.tokens.create("roomMarker", {
-      x: 0,
-      y: 0,
-      z: 1,
-      width: 2,
-      height: 2,
-      imageUrl:
-        "https://storage.ccfolia-cdn.net/users/WVlt9khBkddLydSXu6Gn0unTgYj2/files/78f8a058dae473e89f593ece446dbbf11b88bc2d52f80fe26394eefc303b6b26" // 임시 이미지
-    })
-    console.log("✅ 생성된 마커 ID:", newMarkerId)
+    // const newMarkerId = await ccf.tokens.create("roomMarker", {
+    //   x: 0,
+    //   y: 0,
+    //   z: 1,
+    //   width: 2,
+    //   height: 2,
+    //   imageUrl:
+    //     "https://storage.ccfolia-cdn.net/users/WVlt9khBkddLydSXu6Gn0unTgYj2/files/78f8a058dae473e89f593ece446dbbf11b88bc2d52f80fe26394eefc303b6b26" // 임시 이미지
+    // })
+    // console.log("✅ 생성된 마커 ID:", newMarkerId)
 
     // // 2. 2초 뒤에 위치 이동 (Patch 테스트)
     // setTimeout(async () => {
@@ -89,6 +89,17 @@ setTimeout(async () => {
     //   await ccf.tokens.delete(newPanelId)
     //   console.log("✅ 패널 삭제 완료")
     // }, 4000)
+
+    // window.ccfoliaAPI.messages.modifyRollResult(
+    //   "3qwsaHGh8Y1W3olDYVMX",
+    //   "1D100<=50 ＞ 1 ＞ 결정적 성공",
+    //   {
+    //     success: true,
+    //     critical: true,
+    //     failure: false,
+    //     fumble: false
+    //   }
+    // )
   } catch (error) {
     console.error("❌ 테스트 중 에러:", error)
   }
