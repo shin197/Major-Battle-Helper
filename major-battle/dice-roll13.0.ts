@@ -22,53 +22,80 @@ let logObs: MutationObserver | null = null
 const DICE_LINE_REGEX = /\(\d+\s*B\s*\d+\)\s*[＞>]\s*[\d,\s]+?\s*$/u
 
 function handleLine(el: HTMLElement, currentBox: HTMLElement) {
-  // return
+  // if (!isMainTabActive()) return
+  if (!currentBox.contains(el)) return
 
-  if (!isMainTabActive()) return
-  if (!currentBox.contains(el)) return // 다른 탭으로 옮겨진 줄 skip
+  // 이미 색상이 입혀진 줄은 무한루프 방지를 위해 패스
   if (el.dataset.helper === "dice-marked") return
 
-  const diceNode = el.querySelector(
-    "p > span.MuiTypography-root.MuiTypography-body2"
-  )
+  const pTag = el.querySelector("p")
+  if (!pTag) return
 
-  if (!diceNode) return
+  const diceSpans = pTag.querySelectorAll("span")
+  if (diceSpans.length === 0) return
 
-  const text = getOwnText(
-    el.querySelector("p > span.MuiTypography-root.MuiTypography-body2")
-  )
-
-  // console.log(text)
-
-  // ③ 주사위 판정인지 검사
-  if (!DICE_LINE_REGEX.test(text)) return
-
-  const text2 = getOwnText(el.querySelector("p")) + text
-  const resultText = [
-    { color: "#f44336", text: "대실패" },
-    { color: "#fff", text: "실패" },
-    { color: "#29b6f6", text: "성공" },
-    { color: "rgba(177, 35, 243, 1)", text: "강성공" },
-    { color: "#f1de0d", text: "대성공" }
-  ]
-
-  const diceResult = calcSuccess(text2)
-  const color = resultText[diceResult.crit + 1].color
-  const successText = resultText[diceResult.crit + 1].text
-
-  const badge = document.createElement("span")
-  badge.dataset.helper = "dice-result"
-  badge.style.cssText = `margin-left:.5em;font-weight:${diceResult.crit !== 0 && diceResult.crit !== 1 ? 700 : 400};
-                       color:${color}`
-  badge.textContent = `\u{1F3B2}S=${diceResult.S}${diceResult.unitCount != null ? ` #️⃣${diceResult.unitCount}${diceResult.critCount ? ` ✪${diceResult.critCount}` : ""}` : ""}` // \u{1F3B2} == 🎲
-  if (diceResult.passDC != null) {
-    badge.textContent += ` ${successText}`
+  // 우리가 변경한 시그니처(🎲S=)가 포함된 span을 역순으로 찾습니다.
+  let targetSpan: HTMLSpanElement | null = null
+  for (let i = diceSpans.length - 1; i >= 0; i--) {
+    if (diceSpans[i].textContent?.includes("🎲S=")) {
+      targetSpan = diceSpans[i]
+      break
+    }
   }
 
-  const diceSpan = el.querySelector<HTMLSpanElement>("p > span")
-  diceSpan?.insertAdjacentElement("afterend", badge)
+  if (!targetSpan) return
+
+  const originalHtml = targetSpan.innerHTML
+  const lines = originalHtml.split("\n")
+
+  const coloredLines = lines.map((line) => {
+    // 주사위 결과가 없는 줄은 원본 그대로 둡니다.
+    if (!line.includes("🎲S=")) return line
+
+    // 판정 결과에 따른 색상 및 이펙트 설정
+    let mainColor = "#fff"
+    let isGlow = false
+    let isBold = false
+
+    if (line.includes("대성공")) {
+      mainColor = "#f1de0d"
+      isGlow = true
+      isBold = true
+    } else if (line.includes("강성공")) {
+      mainColor = "rgba(177, 35, 243, 1)"
+      isGlow = false
+      isBold = true
+    } else if (line.includes("성공")) {
+      mainColor = "#29b6f6"
+    } else if (line.includes("대실패")) {
+      mainColor = "#ff5252"
+      isGlow = false
+      isBold = true
+    } else if (line.includes("실패")) {
+      mainColor = "#fff"
+    }
+
+    const glowStyle = isGlow ? `text-shadow: 0 0 5px ${mainColor};` : ""
+    const weightStyle = isBold ? `font-weight: bold;` : ""
+
+    // 💡 변경점: 이전처럼 접두사(prefix)를 자르지 않고, 줄(line) 전체를 통째로 span으로 감쌉니다!
+    let styledLine = `<span style="color: ${mainColor}; ${glowStyle} ${weightStyle}">${line}</span>`
+
+    styledLine = styledLine.replace(
+      /(\u{0023}\u{FE0F}\u{20E3}\d+)/gu,
+      '<span style="color: #29b6f6;">$1</span>'
+    )
+    // (선택) 폭발 이모지(💥1)가 있다면 그 부분만 더 강렬한 붉은색으로 강조합니다.
+    styledLine = styledLine.replace(
+      /(\u{1F4A5}\d+)/gu,
+      '<span style="color: rgba(177, 35, 243, 1); text-shadow: 0 0 4px purple;">$1</span>'
+    )
+
+    return styledLine
+  })
+
+  targetSpan.innerHTML = coloredLines.join("\n")
   el.dataset.helper = "dice-marked"
-  setLastDiceResult(diceResult)
 }
 
 ;(async () => {
@@ -132,9 +159,7 @@ async function getActiveBtn(root: HTMLElement) {
 }
 
 function attachLogObserver(tabBtn: HTMLButtonElement) {
-  // console.log("[chat] 현재 탭:", tabBtn.textContent?.trim())
   const logBox = document.querySelector<HTMLElement>(CHAT_LOG_SEL)
-
   if (!logBox) return console.warn("logBox not found")
 
   logObs?.disconnect()
@@ -144,15 +169,36 @@ function attachLogObserver(tabBtn: HTMLButtonElement) {
     .querySelectorAll(":scope > *")
     .forEach((n) => handleLine(n as HTMLElement, logBox))
 
-  /* 4) 이후 들어올 노드 감시 */
+  /* 4) 이후 들어올 노드 및 텍스트 변경 감시 */
   logObs = new MutationObserver((records) => {
-    records.forEach((r) =>
+    records.forEach((r) => {
+      // 경우 1: 아예 새로운 채팅 노드가 화면에 추가되었을 때
       r.addedNodes.forEach((n) => {
         if (n.nodeType === 1) handleLine(n as HTMLElement, logBox)
       })
-    )
+
+      // 경우 2: 기존 노드 내부의 텍스트(주사위 결과)가 Redux 동기화로 인해 뒤늦게 바뀌었을 때
+      if (r.type === "characterData" || r.type === "childList") {
+        let curr = r.target as HTMLElement | Node | null
+
+        // 변경이 일어난 곳에서 위로 타고 올라가 최상위 채팅 메시지 박스를 찾음
+        while (curr && curr !== logBox) {
+          if ((curr as HTMLElement).parentElement === logBox) {
+            handleLine(curr as HTMLElement, logBox)
+            break
+          }
+          curr = curr.parentNode
+        }
+      }
+    })
   })
-  logObs.observe(logBox, { childList: true })
+
+  // 💡 핵심 변경점: subtree와 characterData를 true로 켜서 내부 텍스트 변화까지 샅샅이 감시합니다.
+  logObs.observe(logBox, {
+    childList: true,
+    subtree: true,
+    characterData: true
+  })
 }
 
 export async function applyMajorBattleDiceResult(msgId: string, msg: any) {
@@ -224,10 +270,10 @@ export async function applyMajorBattleDiceResult(msgId: string, msg: any) {
   const newText = "\n" + newLines.join("\n")
 
   const options = {
-    success: overallSuccess,
-    failure: overallFailure,
+    success: true,
+    failure: false,
     critical: true,
-    fumble: overallFumble
+    fumble: false
   }
 
   await window.ccfoliaAPI.messages.modifyRollResult(
