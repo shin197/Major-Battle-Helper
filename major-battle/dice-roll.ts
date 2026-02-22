@@ -2,24 +2,11 @@ import { waitFor } from "../utils/wait-for"
 import type { DiceResult } from "./dice-result"
 import { setLastDiceResult } from "./dice-result"
 
-const TAB_SCROLLER =
-  "#root div.MuiDrawer-docked form header div.MuiTabs-scroller"
-const TAB_BTN_SEL = `${TAB_SCROLLER} > div > button[role='tab']`
 const CHAT_LOG_SEL = "#root div.MuiDrawer-docked > div > ul > div > div"
 const TAB_BAR = "div.MuiTabs-scroller.MuiTabs-hideScrollbar"
 const MAIN_TAB_ID = "main" // 첫 번째 탭의 id(또는 data-value)가 ‘main’
 
-const RESULT_COLORS = {
-  대실패: "#f44336",
-  실패: "#fff",
-  성공: "#29b6f6",
-  강성공: "rgba(177, 35, 243, 1)",
-  대성공: "#f1de0d"
-}
-
 let logObs: MutationObserver | null = null
-
-const DICE_LINE_REGEX = /\(\d+\s*B\s*\d+\)\s*[＞>]\s*[\d,\s]+?\s*$/u
 
 function handleLine(el: HTMLElement, currentBox: HTMLElement) {
   // if (!isMainTabActive()) return
@@ -52,30 +39,36 @@ function handleLine(el: HTMLElement, currentBox: HTMLElement) {
     // 주사위 결과가 없는 줄은 원본 그대로 둡니다.
     if (!line.includes("🎲S=")) return line
 
-    // 판정 결과에 따른 색상 및 이펙트 설정
-    let mainColor = "#fff"
+    // 💡 판정 결과에 따른 색상 및 이펙트 설정
+    let mainColor = "#fff" // 기본값: 실패 (회색)
     let isGlow = false
     let isBold = false
 
+    // 주의: '대성공', '강성공' 등 긴 단어를 먼저 체크해야 일반 '성공' 글자에 덮어씌워지지 않습니다.
     if (line.includes("대성공")) {
-      mainColor = "#f1de0d"
+      mainColor = "#f1de0d" // 노란색 (강성공 + 보너스)
       isGlow = true
       isBold = true
     } else if (line.includes("강성공")) {
-      mainColor = "rgba(177, 35, 243, 1)"
+      mainColor = "rgba(177, 35, 243, 1)" // 보라색
+      isGlow = false
+      isBold = true
+    } else if (line.includes("성공+")) {
+      mainColor = "#29b6f6" // 파란색 (일반 성공 + 보너스)
+    } else if (line.includes("대실패")) {
+      mainColor = "#f44336" // 빨간색
       isGlow = false
       isBold = true
     } else if (line.includes("성공")) {
-      mainColor = "#29b6f6"
-    } else if (line.includes("대실패")) {
-      mainColor = "#ff5252"
-      isGlow = false
-      isBold = true
+      mainColor = "#fff" // 흰색 (보너스 없는 일반 성공)
     } else if (line.includes("실패")) {
-      mainColor = "#fff"
+      mainColor = "#9e9e9e" // 회색 (실패)
     }
 
-    const glowStyle = isGlow ? `text-shadow: 0 0 5px ${mainColor};` : ""
+    let glowStyle = isGlow ? `text-shadow: 0 0 5px ${mainColor};` : ""
+    if (line.includes("대실패")) {
+      glowStyle = `text-shadow: 0 0 5px #000000;`
+    }
     const weightStyle = isBold ? `font-weight: bold;` : ""
 
     // 💡 변경점: 이전처럼 접두사(prefix)를 자르지 않고, 줄(line) 전체를 통째로 span으로 감쌉니다!
@@ -239,8 +232,14 @@ export async function applyMajorBattleDiceResult(msgId: string, msg: any) {
     hasModifications = true
 
     // 뱃지 텍스트 조합
-    const resultTextMap = ["대실패", "실패", "성공", "강성공", "대성공"]
-    const successText = resultTextMap[diceResult.crit + 1] || ""
+    let successText = ""
+    if (diceResult.crit === -1) successText = "대실패"
+    else if (diceResult.crit === 0) successText = "실패"
+    else if (diceResult.crit === 1) {
+      // 일반 성공일 때 보너스가 터졌는지 검사
+      successText = diceResult.bonusHit ? "성공+" : "성공"
+    } else if (diceResult.crit === 2) successText = "강성공"
+    else if (diceResult.crit >= 3) successText = "대성공"
 
     let customBadge = `\u{1F3B2}S=${diceResult.S}`
     if (diceResult.unitCount != null) {
@@ -326,6 +325,7 @@ function calcSuccess(rawLine: string): DiceResult {
     let crit = 0
     let passDC = true
     let critCount = 0
+    let anyBonusHit = false
 
     for (var i = 0; i < count; i++) {
       const primaryDie = dice[i] ?? 0
@@ -366,6 +366,7 @@ function calcSuccess(rawLine: string): DiceResult {
         S += plus
         bonusHit = true
       }
+      if (bonusHit) anyBonusHit = true
       if (hasDC && S < DC) {
         passDC = false
         crit = 0
@@ -387,7 +388,8 @@ function calcSuccess(rawLine: string): DiceResult {
       crit,
       ...(groupified ? { unitCount } : {}),
       ...(hasDC ? { passDC } : {}),
-      ...(critCount > 0 ? { critCount } : {})
+      ...(critCount > 0 ? { critCount } : {}),
+      bonusHit: anyBonusHit
     }
     setLastDiceResult(diceResult)
     return diceResult

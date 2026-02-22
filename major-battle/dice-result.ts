@@ -1,9 +1,10 @@
 export type DiceResult = {
-  S: number | null // 필수 (null = 아직 없음)
-  crit: number // 필수
-  unitCount?: number // 선택
-  passDC?: boolean // 선택
+  S: number | null
+  crit: number
+  unitCount?: number
+  passDC?: boolean
   critCount?: number
+  bonusHit?: boolean
 }
 
 const KEY = "ccf:lastDiceResult"
@@ -39,7 +40,7 @@ export function setLastDiceResult(res: DiceResult) {
     crit: res.crit,
     unitCount: typeof res.unitCount === "number" ? res.unitCount : undefined,
     passDC: typeof res.passDC === "boolean" ? res.passDC : undefined,
-    critCount: typeof res.critCount === "number" ? res.critCount : undefined,
+    critCount: typeof res.critCount === "number" ? res.critCount : undefined
   }
   save(safe)
 }

@@ -1,7 +1,7 @@
 // contents/inject.ts
 import type { PlasmoCSConfig } from "plasmo"
 
-import { applyMajorBattleDiceResult } from "../major-battle/dice-roll13.0"
+import { applyMajorBattleDiceResult } from "../major-battle/dice-roll"
 import type { CcReq, CcRes } from "../utils/types"
 import { buildAPI } from "./inject/api"
 import {
