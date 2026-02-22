@@ -39,11 +39,7 @@ export const menus = {
 
     for (const menu of menuTypes) {
       if (state[menu.flagKey]) {
-        // 코코포리아 버전이나 상황에 따라 키 이름이 조금 다를 수 있으므로
-        // 유연하게 대체 키(예: openRoomItemId)도 확인하도록 처리하면 더 안전합니다.
         const idFallback = menu.idKey
-          .replace("MenuId", "Id")
-          .replace("DetailId", "Id")
         const targetId = state[menu.idKey] || state[idFallback]
 
         if (targetId) {
