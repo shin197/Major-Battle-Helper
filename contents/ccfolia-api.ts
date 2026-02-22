@@ -117,5 +117,9 @@ export const ccf = {
   getTokenById: (itemId: string) => ccfoliaRPC<any>("tokens.getById", itemId),
   createToken: (type: string, payload: any) =>
     ccfoliaRPC<string>("tokens.create", type, payload),
-  deleteToken: (tokenId: string) => ccfoliaRPC<void>("tokens.delete", tokenId)
+  deleteToken: (tokenId: string) => ccfoliaRPC<void>("tokens.delete", tokenId),
+
+  menus: {
+    getOpenMenuInfo: () => ccfoliaRPC<any>("menus.getOpenMenuInfo")
+  }
 }

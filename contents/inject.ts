@@ -94,7 +94,7 @@ export function startMessageListener() {
     } catch (e) {
       // getServices 내부 에러 무시하고 다음 주기에 재시도
     }
-  }, 1000)
+  }, 5000)
 }
 
 function initSubscription(store: any) {
@@ -146,9 +146,9 @@ function initSubscription(store: any) {
             return
           }
 
-          console.log(
-            `[API-GM] 바닐라 플레이어의 주사위를 대신 처리합니다: ${msgId}`
-          )
+          // console.log(
+          //   `[API-GM] 바닐라 플레이어의 주사위를 대신 처리합니다: ${msgId}`
+          // )
           processedMessageIds.add(msgId)
           applyMajorBattleDiceResult(msgId, currentMsg)
         }, delay)

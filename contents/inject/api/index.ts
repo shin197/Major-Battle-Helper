@@ -2,6 +2,7 @@ import type { get } from "http"
 
 import { characters } from "./characters"
 import { devtools } from "./devtools"
+import { menus } from "./menu"
 import { messages } from "./messages"
 import { tokens } from "./tokens"
 
@@ -23,6 +24,8 @@ export const buildAPI = () => {
     messages,
     getAllMessages: messages.getAll,
     modifyRollResult: messages.modifyRollResult,
+    menus,
+    getOpenMenuInfo: menus.getOpenMenuInfo,
     devtools
   }
 }

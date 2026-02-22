@@ -90,14 +90,14 @@ export const messages = {
       // 💡 6. Firebase에 데이터 Patch 쏘기
       await setDoc(messageRef, payload, { merge: true })
 
-      console.log(
-        `%c[API] 주사위 판정 글로벌 패치 완료: ${messageId}`,
-        "color: #ff5c8e; font-weight:bold;",
-        updatedRoll
-      )
+      // console.log(
+      //   `%c[API] 주사위 판정 글로벌 패치 완료: ${messageId}`,
+      //   "color: #ff5c8e; font-weight:bold;",
+      //   updatedRoll
+      // )
       return true
     } catch (error) {
-      console.error(`[API] 주사위 결과 업데이트 실패:`, error)
+      // console.error(`[API] 주사위 결과 업데이트 실패:`, error)
       return false
     }
   }
