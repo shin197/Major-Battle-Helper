@@ -30,7 +30,7 @@ try {
     waitForCoreEngine()
   }
 } catch (e) {
-  console.error("채팅창 수식 기능 로드 실패:", e)
+  console.error("메이저배틀 다이스봇 로드 실패:", e)
 }
 
 // try { initChatShortcuts() } catch (e) { console.error("채팅 로드 실패:", e) }
