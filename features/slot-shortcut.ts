@@ -6,7 +6,7 @@ import {
   getCurrentCharacterNameInput
 } from "~utils/elements"
 
-import { showToast } from "./toast"
+import { showToast } from "../utils/isolated/toast"
 
 const CODE2NUM: Record<string, string> = {
   Digit0: "0",
@@ -79,34 +79,36 @@ async function loadSlot(idx: string) {
 }
 
 // Alt+숫자 = 저장,  숫자 = 불러오기
-document.addEventListener(
-  "keydown",
-  (e) => {
-    // const idx = e.key
-    const idx = CODE2NUM[e.code]
-    if (!NUMS.includes(idx)) return
+export function initSlotShortcuts() {
+  document.addEventListener(
+    "keydown",
+    (e) => {
+      // const idx = e.key
+      const idx = CODE2NUM[e.code]
+      if (!NUMS.includes(idx)) return
 
-    // 타깃 입력란 포커스일 때만 동작
-    // console.log(idx);
-    if (
-      document.activeElement !== getCurrentCharacterNameInput() &&
-      document.activeElement !== getChatInputBox()
-    )
-      return
+      // 타깃 입력란 포커스일 때만 동작
+      // console.log(idx);
+      if (
+        document.activeElement !== getCurrentCharacterNameInput() &&
+        document.activeElement !== getChatInputBox()
+      )
+        return
 
-    let stopDefault = false
+      let stopDefault = false
 
-    if (!e.altKey && e.ctrlKey && !e.metaKey && !e.shiftKey) {
-      saveSlot(idx) // Ctrl+Shift+숫자 → 저장
-      stopDefault = true
-    } else if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
-      loadSlot(idx) // 숫자 단독 → 불러오기
-      stopDefault = true
-    }
-    if (stopDefault) {
-      e.preventDefault()
-      e.stopPropagation()
-    }
-  },
-  true
-)
+      if (!e.altKey && e.ctrlKey && !e.metaKey && !e.shiftKey) {
+        saveSlot(idx) // Ctrl+Shift+숫자 → 저장
+        stopDefault = true
+      } else if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+        loadSlot(idx) // 숫자 단독 → 불러오기
+        stopDefault = true
+      }
+      if (stopDefault) {
+        e.preventDefault()
+        e.stopPropagation()
+      }
+    },
+    true
+  )
+}

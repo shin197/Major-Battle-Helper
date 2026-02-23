@@ -1,20 +1,25 @@
 // toast.ts ── 확장 util (Plasmo content script)
 let snackbarTemplate: HTMLElement | null = null
+let isObserverRunning = false // 💡 중복 실행 방지용 플래그
 
-/* 1. 최초 탐지: MutationObserver로 원본 스낵바 캐싱 */
-new MutationObserver((muts) => {
-  muts.forEach((mut) =>
-    mut.addedNodes.forEach((n) => {
-      if (
-        n instanceof HTMLElement &&
-        n.matches("div.MuiSnackbar-root.MuiSnackbar-anchorOriginBottomLeft")
-      ) {
-        // 깊이 복사해 두고 원본은 그대로 두기
-        snackbarTemplate = n.cloneNode(true) as HTMLElement
-      }
-    })
-  )
-}).observe(document.body, { childList: true, subtree: true })
+export function initToastObserver() {
+  if (isObserverRunning) return // 이미 켜져있으면 무시
+
+  new MutationObserver((muts) => {
+    muts.forEach((mut) =>
+      mut.addedNodes.forEach((n) => {
+        if (
+          n instanceof HTMLElement &&
+          n.matches("div.MuiSnackbar-root.MuiSnackbar-anchorOriginBottomLeft")
+        ) {
+          snackbarTemplate = n.cloneNode(true) as HTMLElement
+        }
+      })
+    )
+  }).observe(document.body, { childList: true, subtree: true })
+
+  isObserverRunning = true
+}
 
 /* 0. 토스트 전용 컨테이너 가져오기/생성 */
 function ensureToastHost(base: HTMLElement): HTMLElement {

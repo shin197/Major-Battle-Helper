@@ -1,4 +1,4 @@
-import { findItemIdFromDom } from "~utils/token"
+import { findItemIdFromDom } from "~utils/main/token"
 import { generateRandomId } from "~utils/utils"
 
 import { getServices } from "../hijack"
@@ -113,7 +113,7 @@ export const tokens = {
         { markers: { [tokenId]: payload } },
         { merge: true }
       )
-      console.log(`[API] 마커 패널(${tokenId}) 패치 완료:`, updates)
+      // console.log(`[API] 마커 패널(${tokenId}) 패치 완료:`, updates)
     } else {
       // 그 외: 각각의 서브 컬렉션(items, characters 등)에 독립된 문서로 존재
       let colName = ""
@@ -125,8 +125,50 @@ export const tokens = {
 
       const tokenRef = doc(collection(db, "rooms", roomId, colName), tokenId)
       await setDoc(tokenRef, payload, { merge: true })
-      console.log(`[API] ${type}(${tokenId}) 패치 완료:`, updates)
+      // console.log(`[API] ${type}(${tokenId}) 패치 완료:`, updates)
     }
+  },
+
+  patchBulk: async (
+    updates: Array<{ id: string; _type: string; data: Record<string, any> }>
+  ) => {
+    const { fsTools, db, roomId } = getServices()
+    const { writeBatch, doc, collection } = fsTools
+
+    if (!writeBatch)
+      throw new Error(
+        "writeBatch 함수를 찾을 수 없습니다. (hijack.ts 확인 필요)"
+      )
+
+    // 1. 빈 상자(Batch)를 만듭니다.
+    const batch = writeBatch(db)
+    const roomRef = doc(collection(db, "rooms"), roomId)
+
+    // 2. 상자에 업데이트할 토큰들을 차곡차곡 담습니다.
+    updates.forEach(({ id, _type, data }) => {
+      const payload = { ...data, updatedAt: Date.now() }
+
+      if (_type === "roomMarker") {
+        // 마커는 방 문서의 객체 안에 병합
+        batch.set(roomRef, { markers: { [id]: payload } }, { merge: true })
+      } else {
+        // 일반 토큰은 각자의 컬렉션에 병합
+        let colName = ""
+        if (_type === "roomItem") colName = "items"
+        else if (_type === "roomCharacter") colName = "characters"
+        else if (_type === "roomDice") colName = "dices"
+        else if (_type === "roomDeck") colName = "decks"
+
+        if (colName) {
+          const tokenRef = doc(collection(db, "rooms", roomId, colName), id)
+          batch.set(tokenRef, payload, { merge: true })
+        }
+      }
+    })
+
+    // 3. 꽉 찬 상자를 서버로 단 한 번만 전송합니다!
+    await batch.commit()
+    // console.log(`[API] 🚀 ${updates.length}개 토큰 일괄(Batch) 업데이트 완료!`)
   },
 
   /**

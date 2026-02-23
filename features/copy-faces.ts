@@ -1,7 +1,7 @@
 import type { PlasmoCSConfig } from "plasmo"
 
-import { ccf } from "./ccfolia-api"
-import { showToast } from "./toast"
+import { ccf } from "../core/isolated/ccfolia-api"
+import { showToast } from "../utils/isolated/toast"
 
 export const config: PlasmoCSConfig = {
   matches: ["https://ccfolia.com/rooms/*"],
@@ -18,30 +18,33 @@ const LABEL = "표정 복사"
 /* ──────────────────────────────────────────────────────────
    Observer – <body> 직속으로 생성되는 메뉴 div 감시
 ─────────────────────────────────────────────────────────── */
-const bodyObserver = new MutationObserver((records) => {
-  for (const record of records) {
-    for (const node of record.addedNodes) {
-      if (
-        node.nodeType === 1 &&
-        (node as HTMLElement).matches?.(POPOVER_SELECTOR)
-      ) {
-        const paper = (node as HTMLElement).querySelector(PAPER_SELECTOR)
-        if (paper) injectMenuItem(paper as HTMLElement)
-        else {
-          new MutationObserver((muts, obs) => {
-            const p = (node as HTMLElement).querySelector(PAPER_SELECTOR)
-            if (p) {
-              injectMenuItem(p as HTMLElement)
-              obs.disconnect()
-            }
-          }).observe(node, { childList: true, subtree: true })
+export function initCopyFaces() {
+  const bodyObserver = new MutationObserver((records) => {
+    for (const record of records) {
+      for (const node of record.addedNodes) {
+        if (
+          node.nodeType === 1 &&
+          (node as HTMLElement).matches?.(POPOVER_SELECTOR)
+        ) {
+          const paper = (node as HTMLElement).querySelector(PAPER_SELECTOR)
+          if (paper) injectMenuItem(paper as HTMLElement)
+          else {
+            new MutationObserver((muts, obs) => {
+              const p = (node as HTMLElement).querySelector(PAPER_SELECTOR)
+              if (p) {
+                injectMenuItem(p as HTMLElement)
+                obs.disconnect()
+              }
+            }).observe(node, { childList: true, subtree: true })
+          }
         }
       }
     }
-  }
-})
+  })
 
-bodyObserver.observe(document.body, { childList: true })
+  bodyObserver.observe(document.body, { childList: true })
+  // console.log("✅ [Feature] 표정 복사 기능 초기화 완료")
+}
 
 /* ──────────────────────────────────────────────────────────
    메뉴 항목 삽입 (Redux API + 원본 UI 로직)

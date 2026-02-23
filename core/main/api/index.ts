@@ -19,6 +19,7 @@ export const buildAPI = () => {
     getAllTokens: tokens.getAll,
     getTokenById: tokens.getById,
     patchToken: tokens.patch,
+    patchBulkTokens: tokens.patchBulk,
     messages,
     getAllMessages: messages.getAll,
     modifyRollResult: messages.modifyRollResult,

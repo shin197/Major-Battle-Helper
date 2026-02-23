@@ -1,4 +1,4 @@
-import type { CcfoliaCharacter } from "../utils/types"
+import type { CcfoliaCharacter } from "../../utils/types"
 
 function uuid() {
   return `${Date.now()}_${Math.random().toString(36).slice(2)}`
@@ -106,6 +106,9 @@ export const ccf = {
     getById: (itemId: string) => ccfoliaRPC<any>("tokens.getById", itemId),
     patch: (tokenId: string, updates: Record<string, any>) =>
       ccfoliaRPC<void>("tokens.patch", tokenId, updates),
+    patchBulk: (
+      updates: Array<{ id: string; _type: string; data: Record<string, any> }>
+    ) => ccfoliaRPC("tokens.patchBulk", updates),
     create: (type: string, payload: any) =>
       ccfoliaRPC<string>("tokens.create", type, payload),
     delete: (tokenId: string) => ccfoliaRPC<void>("tokens.delete", tokenId),
@@ -114,6 +117,9 @@ export const ccf = {
   getAllTokens: () => ccfoliaRPC<any[]>("tokens.getAll"),
   patchToken: (tokenId: string, updates: Record<string, any>) =>
     ccfoliaRPC<void>("tokens.patch", tokenId, updates),
+  patchBulkTokens: (
+    updates: Array<{ id: string; _type: string; data: Record<string, any> }>
+  ) => ccfoliaRPC("tokens.patchBulk", updates),
   getTokenById: (itemId: string) => ccfoliaRPC<any>("tokens.getById", itemId),
   createToken: (type: string, payload: any) =>
     ccfoliaRPC<string>("tokens.create", type, payload),

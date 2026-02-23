@@ -200,5 +200,7 @@ function replaceInputText(ta: HTMLTextAreaElement, text: string) {
   ta.dispatchEvent(new Event("input", { bubbles: true }))
 }
 
-document.addEventListener("keydown", enableAutoClosingPairs, true)
-document.addEventListener("keydown", enableChatHistory, true)
+export function initChatInputBox() {
+  document.addEventListener("keydown", enableAutoClosingPairs, true)
+  document.addEventListener("keydown", enableChatHistory, true)
+}

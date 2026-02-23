@@ -1,4 +1,4 @@
-import { showToast } from "~contents/toast"
+import { showToast } from "~utils/isolated/toast"
 
 import { waitFor } from "./wait-for"
 

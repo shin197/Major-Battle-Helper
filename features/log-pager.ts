@@ -325,7 +325,7 @@ class Pager {
 
 // ====== UI ======
 
-async function boot() {
+export async function initChatLogPager() {
   // 로그 컨테이너 찾기(스크롤 주체)
   let container: HTMLElement | null = null
   for (let i = 0; i < 60; i++) {
@@ -412,5 +412,3 @@ async function boot() {
   })
   goBottom(container!)
 }
-
-boot()

@@ -1,14 +1,13 @@
-import { getCharacterListButton } from "~utils/elements"
-import { toNum } from "~utils/utils"
+import { getCharacterListButton } from "../utils/elements"
+import { showToast } from "../utils/isolated/toast"
+import { toNum } from "../utils/utils"
 import {
   waitFor,
   waitForDialogByTitle,
   waitForDialogByTitleWithButton,
   type DialogWaitResult
-} from "~utils/wait-for"
-
+} from "../utils/wait-for"
 import type { CharacterData } from "./character-store"
-import { showToast } from "./toast"
 
 export function extractCharacterData(
   dialog: HTMLDivElement,
@@ -694,10 +693,7 @@ async function openCharacterEditDialogRead(
   return characterData
 }
 
-async function openCharacterEditDialogWrite(
-  search: string,
-  cmd: string
-) {
+async function openCharacterEditDialogWrite(search: string, cmd: string) {
   const characterListBtn = getCharacterListButton()
 
   const { dialog, buttonUsed } = await openCharacterEditDialog(search)

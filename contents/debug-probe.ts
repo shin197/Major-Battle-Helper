@@ -1,6 +1,6 @@
 import type { PlasmoCSConfig } from "plasmo"
 
-import { ccf } from "./ccfolia-api" // (경로는 파일 위치에 맞게 수정)
+import { ccf } from "../core/isolated/ccfolia-api" // (경로는 파일 위치에 맞게 수정)
 
 console.log("API 모듈을 불러왔습니다!", ccf)
 export const config: PlasmoCSConfig = {

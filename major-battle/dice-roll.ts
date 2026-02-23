@@ -195,7 +195,7 @@ function attachLogObserver(tabBtn: HTMLButtonElement) {
 }
 
 export async function applyMajorBattleDiceResult(msgId: string, msg: any) {
-  if (process.env.PLASMO_PUBLIC_ENABLE_MAJOR_BATTLE === "false") {
+  if (process.env.PLASMO_PUBLIC_MAJOR_BATTLE === "false") {
     return // 기능이 꺼져있으면 아무것도 하지 않음
   }
 

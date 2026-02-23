@@ -117,6 +117,7 @@ function resolveFirestoreTools(req: any) {
     req,
     (mod) => !!pickFirestoreExports(mod)
   )
+
   if (fsId == null) throw new Error("Firestore SDK 모듈 탐색 실패")
 
   window.__CCFOLIA_MOD_CACHE__!.fsId = fsId
@@ -130,22 +131,58 @@ function pickFirestoreExports(mod: any): null | {
   setDoc: Function
   doc: Function
   collection: Function
-  deleteDoc?: Function // 삭제 기능 확장을 위해 추가
+  deleteDoc: Function
+  writeBatch: Function
 } {
   if (!mod || typeof mod !== "object") return null
 
+  let setDoc, doc, collection, deleteDoc, writeBatch
+
+  // 1. 동적 탐색 (자동)
+  // console.log("[Firestore Hijack] 모듈 탐색 중...")
+  for (const key of Object.keys(mod)) {
+    const val = mod[key]
+    if (typeof val === "function") {
+      const fnStr = val.toString()
+
+      if (fnStr.includes('"setDoc"')) {
+        setDoc = val
+      } else if (fnStr.includes('"deleteDoc"')) {
+        deleteDoc = val
+      } else if (fnStr.includes('"writeBatch"')) {
+        writeBatch = val
+      } else if (fnStr.includes('"collection"')) {
+        collection = val
+      } else if (
+        fnStr.includes('"doc"') &&
+        !fnStr.includes('"setDoc"') &&
+        !fnStr.includes('"deleteDoc"')
+      ) {
+        doc = val
+      }
+    }
+  }
+
+  // 2. 폴백 탐색 (수동)
   const candSetDoc = mod.pl ?? mod.setDoc
   const candDoc = mod.JU ?? mod.doc
   const candCollection = mod.hJ ?? mod.collection
-  const candDeleteDoc = mod.oe ?? mod.deleteDoc // deleteDoc 추정
+  const candDeleteDoc = mod.oe ?? mod.deleteDoc
+  const candWriteBatch = mod.qs ?? mod.writeBatch
 
-  const setDoc = typeof candSetDoc === "function" ? candSetDoc : null
-  const doc = typeof candDoc === "function" ? candDoc : null
-  const collection =
-    typeof candCollection === "function" ? candCollection : null
-  const deleteDoc = typeof candDeleteDoc === "function" ? candDeleteDoc : null
+  // 💡 3. 수정된 할당 로직: 동적으로 찾은 게 있으면 그거 쓰고, 없으면 폴백을 쓴다!
+  setDoc = setDoc ?? (typeof candSetDoc === "function" ? candSetDoc : null)
+  doc = doc ?? (typeof candDoc === "function" ? candDoc : null)
+  collection =
+    collection ?? (typeof candCollection === "function" ? candCollection : null)
+  deleteDoc =
+    deleteDoc ?? (typeof candDeleteDoc === "function" ? candDeleteDoc : null)
+  writeBatch =
+    writeBatch ?? (typeof candWriteBatch === "function" ? candWriteBatch : null)
 
-  if (setDoc && doc && collection) return { setDoc, doc, collection, deleteDoc }
+  if (setDoc && doc && collection && deleteDoc && writeBatch) {
+    return { setDoc, doc, collection, deleteDoc, writeBatch }
+  }
   return null
 }
 

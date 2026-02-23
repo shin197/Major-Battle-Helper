@@ -1,5 +1,5 @@
-import { ccf } from "~contents/ccfolia-api"
-import { showToast } from "~contents/toast"
+import { ccf } from "~core/isolated/ccfolia-api"
+import { showToast } from "~utils/isolated/toast"
 import type { CcfoliaCharacter } from "~utils/types"
 
 // --- 타입 정의 (ccfolia-api와 맞춤) ---

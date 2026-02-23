@@ -1,10 +1,10 @@
-import { ccf } from "~contents/ccfolia-api"
-import { handleStatCommand, transformMessage } from "~contents/enter-eval"
-import { getCurrentCharacterName } from "~contents/slot-shortcut"
-import { showToast } from "~contents/toast"
+import { ccf } from "~core/isolated/ccfolia-api"
+import { handleStatCommand, transformMessage } from "~features/enter-eval"
+import { getCurrentCharacterName } from "~features/slot-shortcut"
 import { expandDiceVars } from "~major-battle/dice-var-exp"
 import type { PlasmoCSConfig } from "~node_modules/plasmo/dist/type"
 import { getChatInputBox } from "~utils/elements"
+import { showToast } from "~utils/isolated/toast"
 import { setNativeValue } from "~utils/utils"
 
 import { capStatus, handleDmgCommand, initBattle } from "./battle-init"
@@ -18,7 +18,7 @@ export const config: PlasmoCSConfig = {
 /** -----------------------------------------------
  * Main Handler: Ctrl + Enter
  * ----------------------------------------------*/
-export async function handleCtrlEnter(ev: KeyboardEvent) {
+export async function evalChatInputBoxMajorBattle(ev: KeyboardEvent) {
   if (!(ev.ctrlKey && ev.key === "Enter")) return
 
   const ta = ev.target as HTMLElement
@@ -78,12 +78,4 @@ export async function handleCtrlEnter(ev: KeyboardEvent) {
   } catch (err) {
     // console.error("[Major Battle Helper] handleCtrlEnter Error:", err)
   }
-}
-
-/** -----------------------------------------------
- *  3. 한 번만 전역 리스너 등록
- * ----------------------------------------------*/
-if (process.env.PLASMO_PUBLIC_ENABLE_MAJOR_BATTLE === "true") {
-  document.addEventListener("keydown", handleCtrlEnter, true)
-  console.log("HANDLE CTRL+ENTER REGISTERED MAJOR BATTLE")
 }

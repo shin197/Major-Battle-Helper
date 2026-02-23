@@ -18,7 +18,3 @@ export async function bootstrapUiAnchors() {
   console.info("[anchors] init done", Array.from(found.keys()))
   // console.log("[anchors] count", found.size)
 }
-
-;(async () => {
-  await bootstrapUiAnchors()
-})()

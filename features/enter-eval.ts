@@ -1,12 +1,12 @@
-import { getCurrentCharacterName } from "~contents/slot-shortcut"
+import { getCurrentCharacterName } from "~features/slot-shortcut"
 import type { PlasmoCSConfig } from "~node_modules/plasmo/dist/type"
 import { getChatInputBox } from "~utils/elements"
 import { evaluateMath } from "~utils/eval-math"
 import type { CcfoliaCharacter } from "~utils/types"
 import { setNativeValue } from "~utils/utils"
 
-import { ccf } from "./ccfolia-api"
-import { showToast } from "./toast"
+import { ccf } from "../core/isolated/ccfolia-api"
+import { showToast } from "../utils/isolated/toast"
 
 export const config: PlasmoCSConfig = {
   matches: ["https://ccfolia.com/rooms/*"],
@@ -188,7 +188,7 @@ export async function handleStatCommand(
 /** -----------------------------------------------
  * Main Handler: Ctrl + Enter
  * ----------------------------------------------*/
-export async function handleCtrlEnter(ev: KeyboardEvent) {
+export async function evalChatInputBox(ev: KeyboardEvent) {
   if (!(ev.ctrlKey && ev.key === "Enter")) return
 
   const ta = ev.target as HTMLElement
@@ -222,11 +222,4 @@ export async function handleCtrlEnter(ev: KeyboardEvent) {
       setNativeValue(ta, finalVal)
     }
   } catch (err) {}
-}
-
-/** -----------------------------------------------
- *  3. 한 번만 전역 리스너 등록
- * ----------------------------------------------*/
-if (process.env.PLASMO_PUBLIC_ENABLE_MAJOR_BATTLE === "false") {
-  document.addEventListener("keydown", handleCtrlEnter, true)
 }
