@@ -190,6 +190,8 @@ export const tokens = {
     let baseTemplate: any = {
       name: "",
       locked: false,
+      width: 2,
+      height: 2,
       z: 0,
       order: 0, // 👈 렌더링에 필수적인 정렬 값
       owner,
@@ -250,7 +252,7 @@ export const tokens = {
       }
 
       // 2-A. 탈취 성공: 원본 Redux Thunk로 Dispatch
-      if (!addMarkerFn) {
+      if (addMarkerFn) {
         await store.dispatch(addMarkerFn(payload))
         console.log("[API] 원본 함수를 이용해 마커 패널 생성 완료!")
         return // (Thunk는 ID를 바로 반환하지 않음)

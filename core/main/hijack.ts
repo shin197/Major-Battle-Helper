@@ -52,7 +52,7 @@ export function getServices() {
   const fsTools = resolveFirestoreTools(req)
   const db = resolveDb(req)
   const selectors = resolveSelectors(req)
-  const roomItemActions = resolveRoomActions(req)
+  const roomItemActions = resolveRoomItemActions(req)
   const roomActions = resolveRoomActions(req) // 👈 마커/룸 액션 탈취
 
   const state = store.getState()

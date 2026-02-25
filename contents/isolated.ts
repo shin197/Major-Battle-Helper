@@ -3,6 +3,7 @@ import type { PlasmoCSConfig } from "plasmo"
 
 import { bootstrapUiAnchors } from "~features/anchors"
 import { initChatInputBox } from "~features/chat-input-box"
+import { initCustomClipboard } from "~features/clipboard-paste"
 import { initSlotShortcuts } from "~features/slot-shortcut"
 
 import { initCopyFaces } from "../features/copy-faces"
@@ -51,6 +52,11 @@ try {
   initChatLogPager()
 } catch (e) {
   console.error("채팅 로그 페이저 로드 실패:", e)
+}
+try {
+  initCustomClipboard()
+} catch (e) {
+  console.error("커스텀 클립보드 로드 실패:", e)
 }
 
 try {
