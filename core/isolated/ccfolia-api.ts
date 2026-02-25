@@ -37,6 +37,7 @@ function ccfoliaRPC<T = any>(method: string, ...args: any[]): Promise<T> {
  * 강력하게 타이핑된 API 래퍼입니다.
  */
 export const ccf = {
+  getReduxState: () => ccfoliaRPC<any>("getReduxState"),
   // ccf.characters
   characters: {
     getCharacters: (filterType: "all" | "active" | "mine" | "status" = "all") =>

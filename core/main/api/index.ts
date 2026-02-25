@@ -1,3 +1,4 @@
+import { getServices } from "../hijack"
 import { characters } from "./characters"
 import { devtools } from "./devtools"
 import { menus } from "./menu"
@@ -6,6 +7,10 @@ import { tokens } from "./tokens"
 
 export const buildAPI = () => {
   return {
+    getReduxState: () => {
+      const { store } = getServices()
+      return store.getState()
+    },
     characters,
     getCharacters: characters.getCharacters,
     getCharacterByName: characters.getByName,

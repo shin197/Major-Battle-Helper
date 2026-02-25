@@ -44,7 +44,7 @@ function startMessageListener(store: any) {
       const msg = messagesEntity[msgId]
       if (!msg || !msg.extend || !msg.extend.roll) return
 
-      // 크리티컬/펌블 등 특별한 상태일 경우 처리 안 함 (기존 로직 유지)
+      // 크리티컬 메시지는 무시 (이미 Major Battle 룰셋에서 처리됨)
       if (msg.extend.roll.critical) {
         processedMessageIds.add(msgId)
         return

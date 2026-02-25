@@ -9,7 +9,6 @@ export const config: PlasmoCSConfig = {
   world: "MAIN",
   run_at: "document_idle"
 }
-const IS_MAJOR_BATTLE = process.env.PLASMO_PUBLIC_MAJOR_BATTLE === "true"
 
 // 🚀 분리된 코어 엔진 실행!
 try {
