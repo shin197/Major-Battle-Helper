@@ -138,134 +138,188 @@ export async function initBattle() {
  * - 형식: /dmg [양(amount)] [타입(type)] [횟수(count)]
  * - 예시: /dmg 15 관통폭발 x2
  * ----------------------------------------------*/
+// ccf API 호출이 필요하므로 상단에 import 되어 있어야 합니다.
+// import { ccf } from "../core/isolated/ccfolia-api"
+// import { showToast } from "../utils/isolated/toast"
+
 export async function handleDmgCommand(
-  character: CcfoliaCharacter,
+  character: CcfoliaCharacter | null, // 대상 지정이 기본이 되므로 null 허용
   commandLine: string
 ) {
-  // 1. 인자 파싱 (/dmg 제거 후 공백 기준 분리)
-  const args = commandLine
-    .replace(/^\/dmg\s+/, "")
+  // 1. 접두사 파싱 (/dmg, /d, /ㅇ 모두 지원)
+  let content = commandLine.replace(/^\/(dmg|d|ㅇ)\s+/, "").trim()
+  if (!content) return
+
+  // 2. 다중 대상 캐릭터 파싱: [캐릭터A] [캐릭터B]
+  const targetNames: string[] = []
+  content = content.replace(/\[(.*?)\]/g, (match, name) => {
+    targetNames.push(name.trim())
+    return "" // 파싱한 이름은 문자열에서 제거
+  })
+
+  const targets: CcfoliaCharacter[] = []
+  if (targetNames.length > 0) {
+    for (const name of targetNames) {
+      const char = await ccf.getCharacterByName(name)
+      if (char) targets.push(char)
+      else showToast(`❗ 캐릭터 '${name}'를 찾을 수 없습니다.`)
+    }
+  } else if (character) {
+    targets.push(character)
+  }
+
+  // 데미지를 줄 대상이 아무도 없다면 종료
+  if (targets.length === 0) {
+    showToast(`❗ 데미지를 적용할 대상 캐릭터가 없습니다.`)
+    return
+  }
+
+  // 3. 데미지 인자 파싱
+  const args = content
     .trim()
     .split(/\s+/)
-  if (args.length === 0 || !args[0]) return
+    .filter((p) => p.length > 0)
+  if (args.length === 0) return
 
   let amount = 0
   let type = "일반"
   let count = 1
 
-  // 각 인자의 형태를 검사하여 알맞은 변수에 할당 (순서 무관)
   for (const arg of args) {
     if (/^x\d+$/i.test(arg)) {
-      // 'x' 또는 'X' 뒤에 숫자가 오는 경우 (예: x2, X3)
       count = parseInt(arg.substring(1), 10) || 1
     } else if (/^-?\d+(\.\d+)?$/.test(arg)) {
-      // 순수 숫자 형태인 경우 (예: 15, 20.5, -5)
       amount = parseFloat(arg) || 0
     } else {
-      // 그 외의 문자열은 타입으로 간주 (예: 관통, 폭발, 충격)
-      // 만약 띄어쓰기로 여러 타입이 들어오면 합침 (예: "관통" "폭발" -> "관통폭발")
-      if (type === "일반") {
-        type = arg
-      } else {
-        type += arg
+      if (type === "일반") type = arg
+      else type += arg
+    }
+  }
+
+  // ==========================================
+  // 4. 데미지 적용 재귀 함수 (내부 함수)
+  // ==========================================
+  async function processDamage(
+    target: CcfoliaCharacter,
+    dmgAmount: number,
+    dmgType: string,
+    hitCount: number,
+    isPrimaryWithSplash: boolean
+  ) {
+    const armorParam = target.params.find((p) => p.label === "장갑")
+    const armor = armorParam ? parseInt(armorParam.value, 10) || 0 : 0
+
+    const defStatus = target.status.find((s) => s.label === "DEF")
+    let def = defStatus ? defStatus.value : 0
+
+    const hpStatus = target.status.find((s) => s.label === "HP")
+    let hp = hpStatus ? hpStatus.value : 0
+
+    const unitStatus = target.status.find((s) => s.label === "#")
+    const unitCount = unitStatus ? Math.max(1, unitStatus.value) : 1
+
+    let dmg = dmgAmount
+
+    // 장갑을 횟수만큼 적용
+    dmg -= armor * hitCount
+
+    // 충격형 피해라면, 방어도에 50% 적용
+    if (dmgType.includes("충격")) {
+      dmg = Math.floor(dmg / 2)
+    }
+
+    // 방어도를 피해만큼 차감
+    def -= Math.max(0, dmg)
+
+    // 방어도가 막아냈을 때 (관통/폭발 등 체력 피해 없이 여기서 종료)
+    if (def > 0) {
+      await ccf.patchCharacter(target.name, {
+        status: { DEF: Math.floor(def) }
+      })
+      // showToast(`🛡️ ${target.name}의 방어도가 공격을 막아냈습니다! (남은 DEF: ${Math.floor(def)})`)
+      return
+    }
+
+    // 뚫고 들어간 순수 피해량 산출
+    let penDamage = -def
+
+    // --- [핵심] 방사(Splash) 피해 확산 로직 ---
+    // 조건: 첫 번째 대상이고, '방사' 타입이며, 방어도를 뚫은 피해량이 0보다 클 때
+    if (isPrimaryWithSplash && penDamage > 0) {
+      const splashTargets = targets.slice(1) // 자신을 제외한 나머지 캐릭터들
+      const splashType = dmgType.replace(/방사/g, "폭발") // 방사를 폭발로 대체
+
+      for (const splashTarget of splashTargets) {
+        // 남은 피해량(penDamage)을 폭발 타입으로 나머지 대상들에게 가함 (count는 1회로 취급)
+        await processDamage(splashTarget, penDamage, splashType, 1, false)
       }
     }
-  }
 
-  // 2. 캐릭터의 필요 파라미터 및 스테이터스 조회
-  const armorParam = character.params.find((p) => p.label === "장갑")
-  const armor = armorParam ? parseInt(armorParam.value, 10) || 0 : 0
+    // --- 방어도가 뚫린(음수) 경우의 주 대상 체력 피해 처리 ---
+    if (dmgType.includes("관통")) {
+      def = Math.floor(def / 2)
+    }
 
-  const defStatus = character.status.find((s) => s.label === "DEF")
-  let def = defStatus ? defStatus.value : 0
+    if (dmgType.includes("폭발") || dmgType.includes("방사")) {
+      def *= unitCount
+    }
 
-  const hpStatus = character.status.find((s) => s.label === "HP")
-  let hp = hpStatus ? hpStatus.value : 0
+    // 방어도가 음수라면 남은 방어도만큼 HP에서 차감
+    hp -= Math.max(0, -def)
+    def = 0
 
-  const unitStatus = character.status.find((s) => s.label === "#")
-  const unitCount = unitStatus ? Math.max(1, unitStatus.value) : 1
+    let kills = 0
+    if (unitStatus) {
+      const maxUnits = Math.ceil(
+        Math.max(0, hp) / (hpStatus ? hpStatus.max : 1)
+      )
+      kills = unitStatus.value - maxUnits
+      unitStatus.value = maxUnits
+    }
 
-  // 3. 데미지 계산
-  let dmg = amount
+    // API로 최종 적용
+    try {
+      await ccf.patchCharacter(target.name, {
+        status: {
+          DEF: def,
+          HP: Math.floor(hp),
+          "#": unitStatus ? unitStatus.value : 0
+        }
+      })
 
-  // 장갑을 횟수만큼 적용
-  dmg -= armor * count
-
-  // 충격형 피해라면, 방어도에 50% 적용
-  if (type.includes("충격")) {
-    dmg = Math.floor(dmg / 2)
-  }
-
-  // 방어도를 피해만큼 차감 (남은 데미지가 0 미만이면 0으로 처리)
-  def -= Math.max(0, dmg)
-
-  // 방어도가 0보다 크다면 여기서 종료
-  if (def > 0) {
-    await ccf.patchCharacter(character.name, {
-      status: { DEF: Math.floor(def) }
-    })
-    //  callCcfolia("patchCharacter", )
-    // console.info(`[BattleHelper] DMG Blocked by DEF. DEF remaining: ${Math.floor(def)}`)
-    return
-  }
-
-  // --- 방어도가 뚫린(음수) 경우의 추가 처리 ---
-
-  // 관통형 피해라면, 남은 방어도가 절반이 된다 (소수점 버림)
-  if (type.includes("관통")) {
-    def = Math.floor(def / 2) // 예: -11 -> -6
-  }
-
-  // 폭발/방사 피해라면, 남은 방어도가 유닛 수만큼 곱해진다
-  if (type.includes("폭발") || type.includes("방사")) {
-    def *= unitCount
-  }
-
-  // 방어도가 음수라면 남은 방어도만큼 HP에서 차감
-  hp -= Math.max(0, -def)
-
-  // 방어도는 완전히 소모되었으므로 0으로 보정 (마이너스로 두지 않음)
-  def = 0
-
-  // 마지막으로, 유닛 수가 있다면, HP에 맞춰서 유닛 수 조정
-  // 유닛 수가 많을 댸는 HP: 28/16 따위로 max가 cur을 초과한 상태로 표기중.
-  // 이 때 유닛 수(#)는 ceil(cur/max)로 계산한다 (최소 0)
-  let kills = 0
-  if (unitStatus) {
-    const maxUnits = Math.ceil(Math.max(0, hp) / (hpStatus ? hpStatus.max : 1))
-    kills = unitStatus.value - maxUnits
-    unitStatus.value = maxUnits
-  }
-
-  // 4. API로 최종 적용
-  try {
-    await ccf.patchCharacter(character.name, {
-      status: {
-        DEF: def,
-        HP: Math.floor(hp),
-        "#": unitStatus ? unitStatus.value : 0
+      let message = `⚔️ ${target.name}에게 ${dmgAmount}`
+      let typeMessage = " 피해를"
+      let countMessage = " 입혔습니다."
+      if (dmgType !== "일반") {
+        typeMessage = `의 ${dmgType}형 피해를`
       }
-    })
-    // callCcfolia("patchCharacter", )
+      if (hitCount > 1) {
+        countMessage = ` 총 ${hitCount}회에 걸쳐서 입혔습니다.`
+      }
+      message += typeMessage + countMessage
 
-    let message = `⚔️ ${character.name}에게 ${amount}`
-    let typeMessage = " 피해를"
-    let countMessage = " 입혔습니다."
-    if (type !== "일반") {
-      typeMessage = `의 ${type}형 피해를`
+      if (kills >= 2 && unitStatus && unitStatus.value === 0) {
+        message += ` (전원 처치!)`
+      } else if (kills > 0) {
+        message += ` (${kills}기 처치)`
+      }
+      showToast(message)
+    } catch (e) {
+      // console.error("[BattleHelper] patchCharacter failed during /dmg:", e)
     }
-    if (count > 1) {
-      countMessage = ` 총 ${count}회에 걸쳐서 입혔습니다.`
-    }
-    message += typeMessage + countMessage
+  }
 
-    if (kills >= 2 && unitStatus.value === 0) {
-      message += ` (전원 처치!)`
-    } else if (kills > 0) {
-      message += ` (${kills}기 처치)`
+  // ==========================================
+  // 5. 대상에 따른 데미지 적용 실행
+  // ==========================================
+  if (type.includes("방사")) {
+    // '방사' 타입일 경우: 첫 번째 캐릭터에게만 전체 로직(isPrimaryWithSplash = true)을 실행.
+    // 나머지 대상들은 processDamage 내부의 확산 로직에 의해 자동으로 피해를 받습니다.
+    await processDamage(targets[0], amount, type, count, true)
+  } else {
+    // '방사' 타입이 아닐 경우: 지정된 모든 캐릭터들에게 동일한 데미지를 각각 적용합니다.
+    for (const target of targets) {
+      await processDamage(target, amount, type, count, false)
     }
-    showToast(message)
-  } catch (e) {
-    // console.error("[BattleHelper] patchCharacter failed during /dmg:", e)
   }
 }

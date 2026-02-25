@@ -71,12 +71,36 @@ function escapeRegExp(string: string) {
 }
 
 export async function handleStatCommand(
-  character: CcfoliaCharacter,
+  character: CcfoliaCharacter | null, // 대상 지정이 기본이 되므로 null 허용
   commandLine: string
 ) {
-  const content = commandLine.replace(/^\/stat\s+/, "").trim()
+  let content = commandLine.replace(/^\/(stat|s|ㄴ)\s+/, "").trim()
+  if (!content) return
 
-  // 1. 명령어 분리
+  let targetCharacter = character
+
+  // 1. 대상 캐릭터 지정 파싱: /stat [캐릭터 이름] HP-5
+  const targetMatch = content.match(/^\[(.*?)\]\s*(.*)$/)
+  if (targetMatch) {
+    const targetName = targetMatch[1].trim()
+    content = targetMatch[2].trim() // [이름] 뒷부분의 실제 명령어들
+
+    // API를 통해 지정된 캐릭터 데이터를 가져옴
+    const fetchedCharacter = await ccf.getCharacterByName(targetName)
+    if (!fetchedCharacter) {
+      showToast(`❗ 캐릭터 '${targetName}'를 찾을 수 없습니다.`)
+      return
+    }
+    targetCharacter = fetchedCharacter
+  }
+
+  // 대상 캐릭터가 결국 없다면 에러 처리
+  if (!targetCharacter) {
+    showToast(`❗ 명령을 적용할 대상 캐릭터가 없습니다.`)
+    return
+  }
+
+  // 2. 명령어 분리
   const parts = content.split(/[\s,]+/).filter((p) => p.length > 0)
   if (parts.length === 0) return
 
@@ -84,8 +108,7 @@ export async function handleStatCommand(
   const paramUpdates: Record<string, string> = {}
 
   for (const part of parts) {
-    // 2. 파싱: 라벨 + 연산자(+, -, =, :) + 값
-    // 정규식에 : 추가됨
+    // 3. 파싱: 라벨 + 연산자(+, -, =, :) + 값
     const match = part.match(/^(.+?)([\+\-\=\:])(.*)$/)
     if (!match) {
       console.warn(`[BattleHelper] Invalid format: ${part}`)
@@ -95,23 +118,19 @@ export async function handleStatCommand(
     const [, label, operator, valStr] = match
 
     // --- [기능 추가] 콜론(:) 연산자 처리 ---
-    // 조건: 수식 계산 없이 문자열 그대로 Params에 대입. Status는 무시함.
     if (operator === ":") {
-      const targetParam = character.params.find((p) => p.label === label)
+      const targetParam = targetCharacter.params.find((p) => p.label === label)
       if (targetParam) {
         paramUpdates[label] = valStr
       } else {
-        // Params에 없으면 경고 (Status에 있어도 무시됨)
         console.warn(
           `[BattleHelper] Param not found for string assignment: ${label}`
         )
       }
-      continue // 다음 명령어로 넘어감
+      continue
     }
 
     // --- 기존 로직 (+, -, =) ---
-
-    // 수식 계산
     let finalValStr = valStr
     const calculated = evaluateMath(valStr)
     if (calculated) finalValStr = calculated
@@ -120,7 +139,7 @@ export async function handleStatCommand(
     const numVal = parseInt(finalValStr, 10)
 
     // A. Status 검색 (숫자형)
-    const targetStatus = character.status.find((s) => s.label === label)
+    const targetStatus = targetCharacter.status.find((s) => s.label === label)
     if (targetStatus) {
       if (isNaN(numVal) && isNumericOp) continue
 
@@ -139,7 +158,7 @@ export async function handleStatCommand(
     }
 
     // B. Params 검색 (문자열/숫자 혼용)
-    const targetParam = character.params.find((p) => p.label === label)
+    const targetParam = targetCharacter.params.find((p) => p.label === label)
     if (targetParam) {
       let currentValStr =
         paramUpdates[label] !== undefined
@@ -148,7 +167,6 @@ export async function handleStatCommand(
       let newValue = currentValStr
 
       if (isNumericOp) {
-        // 숫자 연산 (+, -)
         const currentInt = parseInt(currentValStr, 10)
         if (!isNaN(currentInt) && !isNaN(numVal)) {
           if (operator === "+") newValue = String(currentInt + numVal)
@@ -158,7 +176,6 @@ export async function handleStatCommand(
           continue
         }
       } else if (operator === "=") {
-        // 단순 대입 (=)
         newValue = finalValStr
       }
 
@@ -167,20 +184,21 @@ export async function handleStatCommand(
     }
   }
 
-  // 3. API 호출
+  // 4. API 호출
   const hasStatusUpdates = Object.keys(statusUpdates).length > 0
   const hasParamUpdates = Object.keys(paramUpdates).length > 0
 
   if (hasStatusUpdates || hasParamUpdates) {
     try {
-      await ccf.patchCharacter(character.name, {
+      await ccf.patchCharacter(targetCharacter.name, {
         status: hasStatusUpdates ? statusUpdates : undefined,
         params: hasParamUpdates ? paramUpdates : undefined
       })
-      showToast(`✅ 캐릭터: ${character.name} 의 업데이트가 완료되었습니다.`)
-      // console.info(`[BattleHelper] Batch Update applied for ${character.name}`, { statusUpdates, paramUpdates })
+      showToast(
+        `✅ 캐릭터 '${targetCharacter.name}'의 업데이트가 완료되었습니다.`
+      )
     } catch (e) {
-      showToast("❌ 캐릭터 업데이트에 실패했습니다.")
+      showToast(`❌ 캐릭터 '${targetCharacter.name}' 업데이트에 실패했습니다.`)
     }
   }
 }

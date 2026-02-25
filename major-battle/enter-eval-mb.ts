@@ -48,29 +48,29 @@ export async function evalChatInputBoxMajorBattle(ev: KeyboardEvent) {
     let finalVal = transformMessage(expandedVal, character)
 
     // 4. /stat 명령어 실행
-    if (character && finalVal.startsWith("/stat")) {
+    if (/^\/(stat|s|ㄴ)(?:\s+|$)/.test(finalVal)) {
       await handleStatCommand(character, finalVal)
       finalVal = ""
     }
 
-    // 5. /battle 명령어 실행
+    // /dmg, /d, /ㅇ 명령어 감지
+    // ^\/(dmg|d|ㅇ) : /dmg, /d, /ㅇ 중 하나로 시작하고
+    // (?:\s+|$) : 그 뒤에 반드시 띄어쓰기가 오거나 문장이 끝날 때만 작동
+    if (/^\/(dmg|d|ㅇ)(?:\s+|$)/.test(finalVal)) {
+      await handleDmgCommand(character, finalVal)
+      finalVal = ""
+    }
     if (finalVal.startsWith("/battle")) {
+      // 전투 초기화 처리
       initBattle()
       finalVal = ""
     }
     if (finalVal.startsWith("/cap")) {
+      // 스탯 캐핑 처리
       capStatus(["HP", "MP", "DEF", "AP", "EX", "STK"])
       finalVal = ""
     }
-    if (finalVal.startsWith("/dmg")) {
-      if (character) {
-        await handleDmgCommand(character, finalVal)
-        finalVal = ""
-      } else {
-        // console.warn("[BattleHelper] Cannot use /dmg without a character.")
-        showToast(`❗ 캐릭터 없이는 /dmg 명령어를 사용할 수 없습니다.`)
-      }
-    }
+
     // 6. 결과 반영
     if (finalVal !== ta.value) {
       setNativeValue(ta, finalVal)
