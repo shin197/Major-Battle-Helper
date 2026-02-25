@@ -42,8 +42,7 @@
           "https://ccfolia.com/*"
         ],
         "js": [
-          "$MAJOR_BATTLE_SCRIPT_ISOLATED",
-          "$MAJOR_BATTLE_SCRIPT_MAIN"
+          "$MAJOR_BATTLE_SCRIPT_ISOLATED"
         ]
       }
     ]

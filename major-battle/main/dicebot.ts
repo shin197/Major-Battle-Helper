@@ -1,11 +1,5 @@
 import { applyMajorBattleDiceResult } from "../dice-roll"
 
-// export const config: PlasmoCSConfig = {
-//   matches: ["https://ccfolia.com/rooms/*"],
-//   world: "MAIN", // 💡 MAIN 월드에서 실행하여 Redux Store에 직접 접근
-//   run_at: "document_idle"
-// }
-
 const processedMessageIds = new Set<string>()
 
 // 💡 1. Core 엔진이 Redux를 훔쳐올 때까지 대기
