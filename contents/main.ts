@@ -1,5 +1,6 @@
 import type { PlasmoCSConfig } from "plasmo"
 
+import { initTokenAltClick } from "~features/alt-click"
 import { initBulkDrag } from "~features/bulk-drag"
 import { waitForCoreEngine } from "~major-battle/main/dicebot"
 
@@ -21,6 +22,11 @@ try {
   initBulkDrag()
 } catch (e) {
   console.error("드래그 로드 실패:", e)
+}
+try {
+  initTokenAltClick()
+} catch (e) {
+  console.error("알트클릭 로드 실패:", e)
 }
 
 const IS_MAJOR_BATTLE = process.env.PLASMO_PUBLIC_MAJOR_BATTLE === "true"
