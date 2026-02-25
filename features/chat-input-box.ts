@@ -124,60 +124,70 @@ function enableChatHistory(ev: KeyboardEvent) {
   if (ev.key === "ArrowUp" || ev.key === "ArrowDown") {
     const isModifierPressed = ev.altKey || ev.ctrlKey
 
-    // [핵심] 코코포리아 퍼지 파인더(Fuzzy Finder) 활성화 여부 확인
-    // ID가 'downshift-'로 시작하고 '-menu'로 끝나는 ul 태그를 찾습니다.
+    // 퍼지 파인더(Fuzzy Finder) 활성화 여부 확인
     const fuzzyMenu = document.querySelector(
       'ul[id^="downshift-"][id$="-menu"]'
     )
-
-    // 메뉴가 존재하고, data-hidden이 "false"라면 퍼지 파인더가 열려있는 것입니다.
     const isFuzzyOpen = fuzzyMenu
       ? fuzzyMenu.getAttribute("data-hidden") === "false"
       : false
 
-    // 퍼지 파인더가 열려있다면 코코포리아의 기본 동작(방향키로 목록 이동)에 양보합니다.
-    if (isFuzzyOpen && isModifierPressed) {
-      return
+    if (isFuzzyOpen && isModifierPressed) return
+    if (chatHistory.length === 0) return
+
+    // ----------------------------------------------------
+    // [개선된 커서 이동 보호 로직]
+    // ----------------------------------------------------
+    const cursorStart = ta.selectionStart
+    const cursorEnd = ta.selectionEnd
+
+    if (ev.key === "ArrowUp") {
+      if (ta.value.substring(0, cursorStart).includes("\n")) return
+      if (cursorStart > 0 && ta.value.length > 0) return
     }
 
-    // 히스토리가 없다면 무시
-    if (chatHistory.length === 0) {
-      return
+    if (ev.key === "ArrowDown") {
+      if (ta.value.substring(cursorEnd).includes("\n")) return
+      if (cursorEnd < ta.value.length) return
     }
-    // ----------------------------------------------------
-    // [선택 사항] 여러 줄(Shift+Enter) 입력 시 커서 이동 보호
-    // 만약 현재 입력칸에 줄바꿈(\n)이 포함되어 있다면, 일반적인 커서 이동을 방해하지 않도록 합니다.
-    // (이 기능이 불필요하다면 아래 if문을 지우셔도 됩니다.)
-    if (ta.value.includes("\n")) {
-      return
-    }
-    // ----------------------------------------------------
 
-    // ev.preventDefault()
-    // ev.stopPropagation()
+    // ----------------------------------------------------
+    // 이제부터 히스토리를 불러옵니다. 기본 방향키 동작을 완전히 막습니다.
+    // ----------------------------------------------------
+    ev.preventDefault()
     ev.stopImmediatePropagation()
 
     if (ev.key === "ArrowUp") {
-      // 처음 히스토리를 불러올 때, 현재 치고 있던 텍스트를 임시 저장
       if (historyIndex === chatHistory.length) {
         savedCurrentInput = ta.value
       }
 
-      // 위로 가기 (과거로)
       if (historyIndex > 0) {
         historyIndex--
         replaceInputText(ta, chatHistory[historyIndex])
+
+        // 💡 위로 가기: 텍스트 변경 직후 커서를 맨 앞(0)으로 이동
+        setTimeout(() => {
+          ta.setSelectionRange(0, 0)
+        }, 0)
       }
     } else if (ev.key === "ArrowDown") {
-      // 아래로 가기 (최신으로)
       if (historyIndex < chatHistory.length - 1) {
         historyIndex++
         replaceInputText(ta, chatHistory[historyIndex])
-      }
-      // 맨 아래로 오면 원래 치고 있던 텍스트로 복구
-      else if (historyIndex === chatHistory.length - 1) {
+
+        // 💡 아래로 가기: 텍스트 변경 직후 커서를 맨 뒤로 이동
+        setTimeout(() => {
+          ta.setSelectionRange(ta.value.length, ta.value.length)
+        }, 0)
+      } else if (historyIndex === chatHistory.length - 1) {
         historyIndex++
         replaceInputText(ta, savedCurrentInput)
+
+        // 💡 아래로 가기(원래 작성중이던 글 복구): 커서를 맨 뒤로 이동
+        setTimeout(() => {
+          ta.setSelectionRange(ta.value.length, ta.value.length)
+        }, 0)
       }
     }
   }
