@@ -1,3 +1,5 @@
+import { getPanelRoot, getPanels } from "~utils/elements"
+
 import { ccf } from "../core/isolated/ccfolia-api"
 import { findItemIdFromDom } from "../utils/main/token"
 import { sleep } from "../utils/utils"
@@ -39,16 +41,16 @@ const deselectPanel = (p: HTMLElement) => {
   p.removeAttribute("data-bulk-locked")
 }
 
-const getPanels = (): HTMLElement[] => {
-  return Array.from(
-    document.querySelectorAll('[aria-roledescription="draggable"]')
-  ) as HTMLElement[]
-}
+// const getPanels = (): HTMLElement[] => {
+//   return Array.from(
+//     document.querySelectorAll('[aria-roledescription="draggable"]')
+//   ) as HTMLElement[]
+// }
 
-const getPanelRoot = (t: EventTarget | null): HTMLElement | null => {
-  if (!(t instanceof Element)) return null
-  return t.closest('[aria-roledescription="draggable"]') as HTMLElement | null
-}
+// const getPanelRoot = (t: EventTarget | null): HTMLElement | null => {
+//   if (!(t instanceof Element)) return null
+//   return t.closest('[aria-roledescription="draggable"]') as HTMLElement | null
+// }
 
 const isEventInsideSelectionArea = (e: Event): boolean => {
   if (!(e.target instanceof Element)) return false
@@ -405,9 +407,35 @@ const finishGroupDrag = async () => {
 const onPointerDown = (e: PointerEvent) => {
   if (!e.isTrusted) return
 
+  // ==================================================
+  // 1. 휠클릭 (가운데 버튼) 로직: 드래그 선택 & 개별 토큰 선택
+  // ==================================================
   if (e.button === 1) {
     if (!isEventInsideSelectionArea(e)) return
     e.preventDefault()
+
+    const root = getPanelRoot(e.target)
+
+    // A. 토큰 위에서 Ctrl 또는 Shift를 누르고 휠클릭을 한 경우 (개별 선택/해제)
+    if (root && (e.ctrlKey || e.shiftKey)) {
+      e.stopImmediatePropagation()
+      e.stopPropagation()
+
+      if (!groupDragging && !selecting) {
+        if (e.shiftKey) {
+          // Shift + 휠클릭: 선택에서 무조건 제외
+          if (selected.has(root)) deselectPanel(root)
+        } else if (e.ctrlKey) {
+          // Ctrl + 휠클릭: 선택/해제 토글 (기존 동작)
+          if (selected.has(root)) deselectPanel(root)
+          else selectPanel(root)
+        }
+        suppressNextClick = true
+      }
+      return
+    }
+
+    // B. 빈 공간에서 휠클릭 한 경우 (기존의 사각형 드래그 선택)
     startRectSelection(
       e,
       e.shiftKey ? "subtract" : e.ctrlKey ? "add" : "replace"
@@ -415,22 +443,24 @@ const onPointerDown = (e: PointerEvent) => {
     return
   }
 
+  // ==================================================
+  // 2. Ctrl + 좌클릭 로직 (새로운 액션을 위해 비워둠!)
+  // ==================================================
   if (e.button === 0 && e.ctrlKey) {
     if (!isEventInsideSelectionArea(e)) return
-    const root = getPanelRoot(e.target)
-    if (root) {
-      e.preventDefault()
-      e.stopImmediatePropagation()
-      e.stopPropagation()
-      if (!groupDragging && !selecting) {
-        if (selected.has(root)) deselectPanel(root)
-        else selectPanel(root)
-        suppressNextClick = true
-      }
-      return
-    }
+    // 기존의 토큰 선택 로직은 위쪽(휠클릭)으로 이사갔습니다.
+    // ✨ 여기에 질문자님이 원하시는 "새로운 액션 바인딩"을 마음껏 구현하시면 됩니다!
+
+    // 예:
+    // console.log("Ctrl + 좌클릭 발동!");
+    // doSomethingNew();
+
+    return
   }
 
+  // ==================================================
+  // 3. 기본 좌클릭 로직: 그룹 드래그 시작 또는 선택 초기화
+  // ==================================================
   if (e.button === 0) {
     const root = getPanelRoot(e.target)
     if (root && selected.has(root) && selected.size > 1) {

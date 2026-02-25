@@ -194,3 +194,13 @@ export async function initAnchorsAsync(
 
   return out
 }
+export const getPanels = (): HTMLElement[] => {
+  return Array.from(
+    document.querySelectorAll('[aria-roledescription="draggable"]')
+  ) as HTMLElement[]
+}
+
+export const getPanelRoot = (t: EventTarget | null): HTMLElement | null => {
+  if (!(t instanceof Element)) return null
+  return t.closest('[aria-roledescription="draggable"]') as HTMLElement | null
+}
