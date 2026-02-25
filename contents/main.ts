@@ -1,7 +1,6 @@
 import type { PlasmoCSConfig } from "plasmo"
 
 import { initBulkDrag } from "~features/bulk-drag"
-import { waitForCoreEngine } from "~major-battle/main/dicebot"
 
 import { initCoreEngine } from "../core/main/bridge"
 
@@ -22,15 +21,6 @@ try {
   initBulkDrag()
 } catch (e) {
   console.error("드래그 로드 실패:", e)
-}
-
-try {
-  if (IS_MAJOR_BATTLE) {
-    console.log("Major Battle 다이스봇 로드")
-    waitForCoreEngine()
-  }
-} catch (e) {
-  console.error("메이저배틀 다이스봇 로드 실패:", e)
 }
 
 // try { initChatShortcuts() } catch (e) { console.error("채팅 로드 실패:", e) }

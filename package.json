@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "plasmo dev",
     "build": "plasmo build --env=.env.dev --zip",
+    "build:major": "plasmo build --env=.env.major --zip",
     "build:public": "plasmo build --env=.env.public --zip"
   },
   "dependencies": {
@@ -41,7 +42,8 @@
           "https://ccfolia.com/*"
         ],
         "js": [
-          "$MAJOR_BATTLE_SCRIPT"
+          "$MAJOR_BATTLE_SCRIPT_ISOLATED",
+          "$MAJOR_BATTLE_SCRIPT_MAIN"
         ]
       }
     ]

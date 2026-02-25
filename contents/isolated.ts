@@ -8,7 +8,6 @@ import { initSlotShortcuts } from "~features/slot-shortcut"
 import { initCopyFaces } from "../features/copy-faces"
 import { evalChatInputBox } from "../features/enter-eval"
 import { initChatLogPager } from "../features/log-pager"
-import { evalChatInputBoxMajorBattle } from "../major-battle/enter-eval-mb"
 import { initToastObserver } from "../utils/isolated/toast"
 
 export const config: PlasmoCSConfig = {
@@ -55,10 +54,7 @@ try {
 }
 
 try {
-  if (IS_MAJOR_BATTLE) {
-    console.log("Major Battle 수식 기능 활성화")
-    document.addEventListener("keydown", evalChatInputBoxMajorBattle, true)
-  } else {
+  if (!IS_MAJOR_BATTLE) {
     document.addEventListener("keydown", evalChatInputBox, true)
   }
 } catch (e) {
