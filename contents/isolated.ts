@@ -5,6 +5,7 @@ import { bootstrapUiAnchors } from "~features/anchors"
 import { initChatInputBox } from "~features/chat-input-box"
 import { initCustomClipboard } from "~features/clipboard-paste"
 import { initSlotShortcuts } from "~features/slot-shortcut"
+import { initMouseTracker } from "~utils/mouse-tracker"
 
 import { initCopyFaces } from "../features/copy-faces"
 import { evalChatInputBox } from "../features/enter-eval"
@@ -57,6 +58,12 @@ try {
   initCustomClipboard()
 } catch (e) {
   console.error("커스텀 클립보드 로드 실패:", e)
+}
+
+try {
+  initMouseTracker()
+} catch (e) {
+  console.error("마우스 추적기 초기화 실패:", e)
 }
 
 try {
