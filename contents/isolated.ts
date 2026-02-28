@@ -1,10 +1,10 @@
 // 💡 features 폴더에서 알맹이를 가져옵니다.
 import type { PlasmoCSConfig } from "plasmo"
 
-import { bootstrapUiAnchors } from "~features/anchors"
 import { initChatInputBox } from "~features/chat-input-box"
 import { initCustomClipboard } from "~features/clipboard-paste"
 import { initSlotShortcuts } from "~features/slot-shortcut"
+import { bootstrapUiAnchors } from "~utils/anchors"
 import { initMouseTracker } from "~utils/mouse-tracker"
 
 import { initCopyFaces } from "../features/copy-faces"
