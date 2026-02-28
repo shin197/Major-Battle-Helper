@@ -37,7 +37,7 @@ export async function capStatus(mustCap: string[] = []) {
           // Max가 0일 때: 보통은 무제한이지만, mustCap에 포함되면 0으로 제한
           if (mustCap.includes(st.label)) {
             newValue = 0
-          } else if (st.value < 0) {
+          } else if (st.value > 0) {
             continue // 제한 없음 (건너뜀)
           } else {
             newValue = 0
@@ -321,5 +321,97 @@ export async function handleDmgCommand(
     for (const target of targets) {
       await processDamage(target, amount, type, count, false)
     }
+  }
+}
+
+export async function setUnitCount(
+  character: CcfoliaCharacter | null,
+  commandLine: string
+) {
+  const trimmedCommand = commandLine.trim()
+
+  // 1. 커맨드 접두사 확인 (/unit, /u, /ㅕ)
+  const prefixRegex = /^\/(?:unit|u|ㅕ)(?=\s|$)/i
+  if (!prefixRegex.test(trimmedCommand)) {
+    return showToast("❗ 올바른 커맨드 형식이 아닙니다.")
+  }
+
+  // 접두사를 제거한 나머지 인자 문자열
+  let argsString = trimmedCommand.replace(prefixRegex, "")
+
+  // 2. 대상(Target) 파싱: 대괄호 [...] 안의 내용 추출
+  let targetName: string | null = null
+  const targetMatch = argsString.match(/\[(.*?)\]/)
+
+  if (targetMatch) {
+    targetName = targetMatch[1].trim() // 대괄호 안의 대상 이름
+    // 숫자를 찾기 전에 혼선(예: [고블린1]의 1)을 막기 위해 대상 텍스트를 지워줍니다.
+    argsString = argsString.replace(targetMatch[0], "")
+  }
+
+  // 3. 정수(유닛 수치) 파싱: 남은 문자열에서 기호(+, -)와 숫자 추출
+  // 부호(+, -)가 선택적으로 올 수 있고, 그 뒤에 공백이 있을 수도 있으며, 이어서 숫자가 오는 패턴
+  const countMatch = argsString.match(/([+-]?\s*\d+)/)
+  if (!countMatch) {
+    return showToast(
+      "❗ 설정할 유닛 수치(정수)를 입력해주세요. (예: /u [대상] +3, /u -2 [대상] 또는 /u 3)"
+    )
+  }
+
+  // 공백을 제거하여 순수한 '기호+숫자' 또는 '숫자' 형태의 문자열로 만듭니다. (예: "+ 3" -> "+3")
+  const countStr = countMatch[0].replace(/\s+/g, "")
+
+  // 문자열이 '+' 또는 '-'로 시작한다면 덧셈/뺄셈(add) 모드로 설정합니다.
+  let add = countStr.startsWith("+") || countStr.startsWith("-")
+
+  // 부호가 포함된 문자열을 정수로 변환합니다. ('-3'은 -3으로 정상 변환됩니다)
+  let newCount = parseInt(countStr, 10)
+
+  // 파싱 결과 확인용 (개발 환경)
+  console.log(
+    `[Parse Result] Target: ${targetName}, Count: ${newCount}, AddMode: ${add}`
+  )
+
+  try {
+    let targetCharacter = targetName
+      ? await ccf.characters.getByName(targetName)
+      : character
+
+    if (!targetCharacter) {
+      return showToast(`❗ 지정한 대상 캐릭터를 찾을 수 없습니다.`)
+    }
+
+    // 4. 캐릭터 스테이터스 업데이트
+    const unitCount = targetCharacter?.status.find(
+      (s) => s.label === "#"
+    )?.value
+
+    if (unitCount === undefined) {
+      return showToast(
+        `❗ ${targetCharacter?.name || "대상"}에게 유닛 수치(#)가 없습니다.`
+      )
+    }
+
+    const hpStatus = targetCharacter?.status.find((s) => s.label === "HP")
+    let hp = hpStatus ? hpStatus.value : 0
+    let hpMax = hpStatus ? hpStatus.max : 0
+
+    // add 모드일 경우 기존 유닛 수에 가감하고, 아닐 경우 덮어씌웁니다.
+    if (add) {
+      hp += hpMax * newCount // newCount가 음수(-3 등)라면 알아서 감소합니다.
+      newCount += unitCount
+    } else {
+      hp = hpMax * newCount
+    }
+
+    await ccf.patchCharacter(targetCharacter!.name, {
+      status: { HP: hp, "#": newCount }
+    })
+
+    const targetMsg = targetName ? `[${targetName}]의 ` : ""
+    showToast(`✅ ${targetMsg}유닛 수가 ${newCount}로 설정되었습니다.`)
+  } catch (e) {
+    console.error("[BattleHelper] setUnitCount Error:", e)
+    showToast("❌ 스테이터스 보정 중 오류가 발생했습니다.")
   }
 }

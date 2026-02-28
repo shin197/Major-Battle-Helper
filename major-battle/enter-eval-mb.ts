@@ -7,7 +7,12 @@ import { getChatInputBox } from "~utils/elements"
 import { showToast } from "~utils/isolated/toast"
 import { setNativeValue } from "~utils/utils"
 
-import { capStatus, handleDmgCommand, initBattle } from "./battle-init"
+import {
+  capStatus,
+  handleDmgCommand,
+  initBattle,
+  setUnitCount
+} from "./battle-init"
 
 export const config: PlasmoCSConfig = {
   matches: ["https://ccfolia.com/rooms/*"],
@@ -58,6 +63,10 @@ export async function evalChatInputBoxMajorBattle(ev: KeyboardEvent) {
     // (?:\s+|$) : 그 뒤에 반드시 띄어쓰기가 오거나 문장이 끝날 때만 작동
     if (/^\/(dmg|d|ㅇ)(?:\s+|$)/.test(finalVal)) {
       await handleDmgCommand(character, finalVal)
+      finalVal = ""
+    }
+    if (/^\/(unit|u|ㅕ)(?:\s+|$)/.test(finalVal)) {
+      await setUnitCount(character, finalVal)
       finalVal = ""
     }
     if (finalVal.startsWith("/battle")) {
