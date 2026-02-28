@@ -1,4 +1,6 @@
 import { getPanelRoot, getPanels } from "~utils/elements"
+import { showToast } from "~utils/isolated/toast"
+import { getGridCoordinateFromMouse, lastMousePos } from "~utils/mouse-tracker"
 
 import { ccf } from "../core/isolated/ccfolia-api"
 import { findItemIdFromDom } from "../utils/main/token"
@@ -590,10 +592,80 @@ const onKeyDown = (e: KeyboardEvent) => {
       }
 
       if (deletedCount > 0) {
-        console.log(`[API Drag] 🗑️ ${deletedCount}개의 토큰을 삭제했습니다.`)
-        // 화면에서 선택된 파란색 테두리 등을 깔끔하게 초기화합니다.
+        showToast(`❎ ${deletedCount}개 토큰을 삭제했습니다.`)
         clearSelection()
       }
+    })()
+  }
+
+  // 💡 3. Ctrl + C : 다중 토큰 복사
+  if (e.ctrlKey && (e.key === "c" || e.key === "C")) {
+    const activeEl = document.activeElement as HTMLElement
+    if (activeEl) {
+      const tag = activeEl.tagName.toLowerCase()
+      if (tag === "input" || tag === "textarea" || activeEl.isContentEditable)
+        return
+    }
+
+    const tokensToCopy = Array.from(selected)
+
+    if (tokensToCopy.length === 0) return
+    e.preventDefault()
+    ;(async () => {
+      const tokenDatas = []
+      let minX = Infinity,
+        maxX = -Infinity
+      let minY = Infinity,
+        maxY = -Infinity
+
+      // 1. 모든 토큰의 데이터를 가져오면서 Bounding Box(최소/최대 좌표)를 구합니다.
+      for (const el of tokensToCopy) {
+        const domId = findItemIdFromDom(el)
+        if (!domId) continue
+
+        const tokenData = await fetchTokenData(domId)
+        if (!tokenData) continue
+
+        tokenDatas.push(tokenData)
+
+        // 최소/최대 좌표 갱신 (그룹의 전체 크기를 파악)
+        if (tokenData.x < minX) minX = tokenData.x
+        if (tokenData.x > maxX) maxX = tokenData.x
+        if (tokenData.y < minY) minY = tokenData.y
+        if (tokenData.y > maxY) maxY = tokenData.y
+      }
+
+      if (tokenDatas.length === 0) return
+
+      // 🌟 2. UX 핵심: 그룹의 '정중앙' 좌표를 계산하여 영점으로 삼습니다.
+      const originX = Math.round((minX + maxX) / 2)
+      const originY = Math.round((minY + maxY) / 2)
+
+      const bundleItems = []
+
+      // 3. 중심점 대비 상대 좌표(dx, dy) 계산 및 데이터 정제
+      for (const tokenData of tokenDatas) {
+        const { id, _id, owner, createdAt, updatedAt, ...cleanData } = tokenData
+        if (
+          tokenData._type === "roomItem" ||
+          tokenData._type === "roomMarker"
+        ) {
+          bundleItems.push({
+            kind: tokenData._type,
+            data: cleanData,
+            dx: tokenData.x - originX, // 중심점으로부터 얼마나 떨어져 있는가?
+            dy: tokenData.y - originY
+          })
+        }
+      }
+
+      const clipboardText = JSON.stringify({
+        kind: "battleHelperBundle",
+        items: bundleItems
+      })
+
+      await navigator.clipboard.writeText(clipboardText)
+      showToast(`✅ ${bundleItems.length}개 토큰을 복사했습니다.`) // 📋
     })()
   }
 }
@@ -607,5 +679,5 @@ export function initBulkDrag() {
   window.addEventListener("mousedown", onMouseDown, true)
   window.addEventListener("keydown", onKeyDown, true)
   window.addEventListener("click", onClickCapture, true)
-  console.log("[API Drag] 스크립트 연결 완료 (aria-roledescription 모드)")
+  // console.log("[API Drag] 스크립트 연결 완료 (aria-roledescription 모드)")
 }

@@ -1,12 +1,12 @@
 import { getOrFindAnchor, type AnchorSpec } from "./elements"
 
-if (process.env.NODE_ENV === "development") {
-  // 개발 모드일 때만 window 객체에 함수를 노출시킵니다.
-  ;(window as any).debugAnchors = bootstrapUiAnchors
-  console.log(
-    "🛠️ [Debug] 콘솔에 window.debugAnchors() 를 입력하면 DOM 스캔을 시작합니다."
-  )
-}
+// if (process.env.NODE_ENV === "development") {
+//   // 개발 모드일 때만 window 객체에 함수를 노출시킵니다.
+//   ;(window as any).debugAnchors = bootstrapUiAnchors
+//   // console.log(
+//   //   "🛠️ [Debug] 콘솔에 window.debugAnchors() 를 입력하면 DOM 스캔을 시작합니다."
+//   // )
+// }
 
 // 💡 모든 주요 DOM 요소의 탐색 규칙을 한곳에 모아 관리합니다.
 export const ANCHOR_SPECS = {
@@ -67,28 +67,4 @@ export async function bootstrapUiAnchors() {
   const results = await Promise.all(
     entries.map(([, spec]) => getOrFindAnchor(spec as AnchorSpec<HTMLElement>))
   )
-
-  // 3. 콘솔에 출력할 디버깅용 객체 조립
-  // const debugReport: Record<string, any> = {}
-  // let successCount = 0
-
-  // entries.forEach(([constantName, spec], index) => {
-  //   const el = results[index]
-  //   if (el) {
-  //     // 찾은 경우 DOM 요소 자체를 값으로 넣음 (콘솔에서 마우스 호버로 확인 가능)
-  //     debugReport[constantName] = el
-  //     successCount++
-  //   } else {
-  //     // 못 찾은 경우 명시적으로 표시
-  //     debugReport[constantName] = "❌ Not Found"
-  //   }
-  // })
-
-  // // 4. 결과 출력
-  // console.log(
-  //   `[anchors] Pre-fetch done. (${successCount}/${entries.length} found)`
-  // )
-
-  // // 표 형태로 깔끔하게 렌더링 (개발자 도구에서 아주 보기 좋습니다!)
-  // console.table(debugReport)
 }
