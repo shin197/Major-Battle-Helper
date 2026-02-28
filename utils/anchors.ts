@@ -31,18 +31,23 @@ export const ANCHOR_SPECS = {
 
   TABLE_CONTAINER: {
     key: "table-container",
-    selector: "#root > div > div:nth-of-type(2) > div > div > div > div"
+    selector:
+      "#root > div > div:nth-of-type(2) > div > div > div > div > div > div"
   } as AnchorSpec<HTMLDivElement>,
+  // #root > div > div:nth-of-type(2) > div > div > div > div
+
   CHARACTER_NAME_INPUT: {
     key: "character-name-input",
     selector:
       "#root > div > div.MuiDrawer-root.MuiDrawer-docked> div > div > form > div:nth-child(2) > div > div > input"
   } as AnchorSpec<HTMLInputElement>,
+
   CHARACTER_CHAT_PALETTE_EDIT_BTN: {
     key: "character-chat-palette-edit-btn",
     selector:
       "#root > div > div.MuiDrawer-root.MuiDrawer-docked > div > div > form > div:nth-child(2) > div:nth-child(3) > button"
   } as AnchorSpec<HTMLButtonElement>,
+
   CHARACTER_LIST_BTN: {
     key: "character-list-btn",
     selector: "#root > div > header > div > button:nth-child(3)"
@@ -64,26 +69,26 @@ export async function bootstrapUiAnchors() {
   )
 
   // 3. 콘솔에 출력할 디버깅용 객체 조립
-  const debugReport: Record<string, any> = {}
-  let successCount = 0
+  // const debugReport: Record<string, any> = {}
+  // let successCount = 0
 
-  entries.forEach(([constantName, spec], index) => {
-    const el = results[index]
-    if (el) {
-      // 찾은 경우 DOM 요소 자체를 값으로 넣음 (콘솔에서 마우스 호버로 확인 가능)
-      debugReport[constantName] = el
-      successCount++
-    } else {
-      // 못 찾은 경우 명시적으로 표시
-      debugReport[constantName] = "❌ Not Found"
-    }
-  })
+  // entries.forEach(([constantName, spec], index) => {
+  //   const el = results[index]
+  //   if (el) {
+  //     // 찾은 경우 DOM 요소 자체를 값으로 넣음 (콘솔에서 마우스 호버로 확인 가능)
+  //     debugReport[constantName] = el
+  //     successCount++
+  //   } else {
+  //     // 못 찾은 경우 명시적으로 표시
+  //     debugReport[constantName] = "❌ Not Found"
+  //   }
+  // })
 
-  // 4. 결과 출력
-  console.log(
-    `[anchors] Pre-fetch done. (${successCount}/${entries.length} found)`
-  )
+  // // 4. 결과 출력
+  // console.log(
+  //   `[anchors] Pre-fetch done. (${successCount}/${entries.length} found)`
+  // )
 
-  // 표 형태로 깔끔하게 렌더링 (개발자 도구에서 아주 보기 좋습니다!)
-  console.table(debugReport)
+  // // 표 형태로 깔끔하게 렌더링 (개발자 도구에서 아주 보기 좋습니다!)
+  // console.table(debugReport)
 }

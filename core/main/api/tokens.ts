@@ -309,32 +309,96 @@ export const tokens = {
     return newId
   },
 
-  /**
-   * 토큰 삭제
-   */
   delete: async (tokenId: string) => {
-    const { fsTools, db, roomId } = getServices()
-    const { doc, collection, deleteDoc, setDoc } = fsTools
+    const { fsTools, db, roomId, store, roomItemActions, roomActions } =
+      getServices()
+    const { doc, collection, deleteDoc } = fsTools
 
     const target = tokens.getById(tokenId)
     if (!target) throw new Error(`토큰 '${tokenId}'를 찾을 수 없습니다.`)
 
     const type = target._type
 
-    if (type === "roomMarker") {
-      // 마커 삭제 (Map 객체의 특정 키 제거)
-      // 주의: Firestore SDK의 deleteField() 함수가 없으므로 null을 할당하여 비활성화/삭제 유도
-      const roomRef = doc(collection(db, "rooms"), roomId)
-      await setDoc(roomRef, { markers: { [tokenId]: null } }, { merge: true })
-      console.log(`[API] 마커 패널(${tokenId}) 삭제 완료 (null 처리)`)
-    } else {
-      // 스크린 패널(roomItem) 등 독립된 컬렉션 문서 삭제
+    // ==========================================
+    // 1. 룸 아이템(스크린 패널) 삭제 로직
+    // ==========================================
+    if (type === "roomItem") {
+      let deleteRoomItemFn: Function | null = null
+
+      if (roomItemActions) {
+        if (typeof roomItemActions.deleteRoomItem === "function") {
+          deleteRoomItemFn = roomItemActions.deleteRoomItem
+        } else {
+          // 난독화 대비 폴백 탐색
+          deleteRoomItemFn = Object.values(roomItemActions).find(
+            (fn: any) =>
+              typeof fn === "function" &&
+              (fn.toString().includes('"delete-item"') ||
+                fn.toString().includes('"remove-item"'))
+          ) as Function
+        }
+      }
+
+      if (deleteRoomItemFn) {
+        await store.dispatch(deleteRoomItemFn(roomId, tokenId))
+        console.log(
+          `[API] 원본 함수를 이용해 스크린 패널(${tokenId}) 삭제 완료!`
+        )
+        return
+      }
+
+      // 원본 함수를 못 찾았을 경우 최후의 수단으로 Firestore 문서 직접 삭제 (roomItem은 이게 안전합니다)
+      if (!deleteDoc)
+        throw new Error("deleteDoc 함수를 찾을 수 없습니다. (hijack.ts 확인)")
+      // const tokenRef = doc(collection(db, "rooms", roomId, "items"), tokenId)
+      // await deleteDoc(tokenRef)
+      console.log(
+        `[API] Firestore 직접 접근으로 스크린 패널(${tokenId}) 삭제 완료`
+      )
+      console.log(`[API] Firestore 삭제 실패`)
+    }
+
+    // ==========================================
+    // 2. 룸 마커 삭제 로직 (가장 주의해야 할 부분)
+    // ==========================================
+    else if (type === "roomMarker") {
+      let deleteRoomMarkerFn: Function | null = null
+
+      if (roomActions) {
+        if (typeof roomActions.deleteRoomMarker === "function") {
+          deleteRoomMarkerFn = roomActions.deleteRoomMarker
+        } else {
+          // 난독화 대비 폴백 탐색
+          deleteRoomMarkerFn = Object.values(roomActions).find(
+            (fn: any) =>
+              typeof fn === "function" &&
+              (fn.toString().includes('"delete-marker"') ||
+                fn.toString().includes('"remove-marker"'))
+          ) as Function
+        }
+      }
+
+      if (deleteRoomMarkerFn) {
+        await store.dispatch(deleteRoomMarkerFn(roomId, tokenId))
+        console.log(`[API] 원본 함수를 이용해 마커 패널(${tokenId}) 삭제 완료!`)
+        return
+      } else {
+        // ❌ 절대 null 덮어씌우기를 하지 않습니다.
+        throw new Error(
+          "❗ 안전한 마커 삭제 함수(deleteRoomMarker)를 찾지 못해 마커 삭제를 중단합니다."
+        )
+      }
+    }
+
+    // ==========================================
+    // 3. 그 외 토큰 (캐릭터, 주사위, 덱) 삭제 로직
+    // ==========================================
+    else {
       if (!deleteDoc)
         throw new Error("deleteDoc 함수를 찾을 수 없습니다. (hijack.ts 확인)")
 
       let colName = ""
-      if (type === "roomItem") colName = "items"
-      else if (type === "roomCharacter") colName = "characters"
+      if (type === "roomCharacter") colName = "characters"
       else if (type === "roomDice") colName = "dices"
       else if (type === "roomDeck") colName = "decks"
 

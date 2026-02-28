@@ -138,23 +138,26 @@ function pickFirestoreExports(mod: any): null | {
 
   let setDoc, doc, collection, deleteDoc, writeBatch
 
-  // 1. 동적 탐색 (자동)
-  // console.log("[Firestore Hijack] 모듈 탐색 중...")
+  // 1. 객체의 모든 속성을 순회하며 함수형태인 것들만 검사
   for (const key of Object.keys(mod)) {
     const val = mod[key]
     if (typeof val === "function") {
       const fnStr = val.toString()
 
-      if (fnStr.includes('"setDoc"')) {
+      // Firebase V9 SDK의 특징적인 문자열 또는 함수 이름으로 유추
+      // 난독화 환경에서도 원본 이름(name) 속성이 남아있는 경우가 꽤 있습니다.
+      const fnName = val.name || ""
+
+      if (fnStr.includes('"setDoc"') || fnName === "setDoc") {
         setDoc = val
-      } else if (fnStr.includes('"deleteDoc"')) {
+      } else if (fnStr.includes('"deleteDoc"') || fnName === "deleteDoc") {
         deleteDoc = val
-      } else if (fnStr.includes('"writeBatch"')) {
+      } else if (fnStr.includes('"writeBatch"') || fnName === "writeBatch") {
         writeBatch = val
-      } else if (fnStr.includes('"collection"')) {
+      } else if (fnStr.includes('"collection"') || fnName === "collection") {
         collection = val
       } else if (
-        fnStr.includes('"doc"') &&
+        (fnStr.includes('"doc"') || fnName === "doc") &&
         !fnStr.includes('"setDoc"') &&
         !fnStr.includes('"deleteDoc"')
       ) {
@@ -163,26 +166,19 @@ function pickFirestoreExports(mod: any): null | {
     }
   }
 
-  // 2. 폴백 탐색 (수동)
-  const candSetDoc = mod.pl ?? mod.setDoc
-  const candDoc = mod.JU ?? mod.doc
-  const candCollection = mod.hJ ?? mod.collection
-  const candDeleteDoc = mod.oe ?? mod.deleteDoc
-  const candWriteBatch = mod.qs ?? mod.writeBatch
+  // 2. 동적 탐색 실패 시 알려진 Fallback (이전 버전의 코코포리아 난독화 키)
+  // 코코포리아 업데이트 시 바뀔 수 있으므로 1번(동적 탐색)이 주력입니다.
+  setDoc = setDoc ?? mod.pl ?? mod.setDoc
+  doc = doc ?? mod.JU ?? mod.doc
+  collection = collection ?? mod.hJ ?? mod.collection
+  deleteDoc = deleteDoc ?? mod.oe ?? mod.deleteDoc
+  writeBatch = writeBatch ?? mod.qs ?? mod.writeBatch
 
-  // 💡 3. 수정된 할당 로직: 동적으로 찾은 게 있으면 그거 쓰고, 없으면 폴백을 쓴다!
-  setDoc = setDoc ?? (typeof candSetDoc === "function" ? candSetDoc : null)
-  doc = doc ?? (typeof candDoc === "function" ? candDoc : null)
-  collection =
-    collection ?? (typeof candCollection === "function" ? candCollection : null)
-  deleteDoc =
-    deleteDoc ?? (typeof candDeleteDoc === "function" ? candDeleteDoc : null)
-  writeBatch =
-    writeBatch ?? (typeof candWriteBatch === "function" ? candWriteBatch : null)
-
-  if (setDoc && doc && collection && deleteDoc && writeBatch) {
+  // updateDoc도 필수 요건에 추가
+  if (setDoc && doc && collection && deleteDoc) {
     return { setDoc, doc, collection, deleteDoc, writeBatch }
   }
+
   return null
 }
 

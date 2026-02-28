@@ -513,8 +513,19 @@ const onMouseDown = (e: MouseEvent) => {
   }
 }
 
+const onClickCapture = (e: MouseEvent) => {
+  if (suppressNextClick) {
+    e.preventDefault()
+    e.stopImmediatePropagation()
+    e.stopPropagation()
+    suppressNextClick = false
+  }
+}
+
 const onKeyDown = (e: KeyboardEvent) => {
   if (!e.isTrusted) return
+
+  // 1. ESC 키: 선택 취소 및 드래그 취소 (기존 로직 유지)
   if (e.key === "Escape") {
     if (selecting) endRectSelection()
     if (groupDragging) {
@@ -523,15 +534,67 @@ const onKeyDown = (e: KeyboardEvent) => {
       dragLeader = null
     }
     clearSelection()
+    return
   }
-}
 
-const onClickCapture = (e: MouseEvent) => {
-  if (suppressNextClick) {
+  // 💡 2. Delete 또는 Backspace 키: 선택된 토큰 다중 삭제
+  if (e.key === "Delete" || e.key === "Backspace") {
+    // [중요] 사용자가 텍스트 입력창(채팅창, 캐릭터 시트 등)에 타이핑 중인지 확인
+    const activeEl = document.activeElement as HTMLElement
+    if (activeEl) {
+      const tag = activeEl.tagName.toLowerCase()
+      const isInput =
+        tag === "input" || tag === "textarea" || activeEl.isContentEditable
+      // 타이핑 중이라면 토큰 삭제 로직을 무시하고 브라우저 기본 동작(글자 지우기)을 하도록 둡니다.
+      if (isInput) return
+    }
+
+    // 선택된 토큰이 없다면 무시
+    if (selected.size === 0) return
+
+    // 기본 '뒤로가기' 동작 등 방지
     e.preventDefault()
-    e.stopImmediatePropagation()
-    e.stopPropagation()
-    suppressNextClick = false
+
+    // 비동기 삭제 처리 IIFE
+    ;(async () => {
+      const elementsToDelete = Array.from(selected)
+      let deletedCount = 0
+
+      for (const el of elementsToDelete) {
+        const domId = findItemIdFromDom(el)
+        if (!domId) continue
+
+        // 토큰의 정확한 ID와 타입을 알기 위해 데이터를 가져옵니다.
+        const tokenData = await fetchTokenData(domId)
+        if (!tokenData) continue
+
+        console.log("TokenData", { targetId: domId, tokenData })
+
+        const targetId = domId || tokenData.id
+        const targetType = tokenData._type
+
+        try {
+          // ✨ ccf API를 호출하여 삭제 (ccfolia-api.ts에 해당 메서드가 구현되어 있어야 합니다)
+          // 구현되어 있는 메서드 이름에 맞게 수정해 주세요. (예: remove, delete, deleteDoc 등)
+          if (ccf.tokens.delete) {
+            await ccf.tokens.delete(targetId)
+            deletedCount++
+          } else {
+            console.warn(
+              "[API Drag] ccf.tokens.delete 메서드가 구현되지 않았습니다."
+            )
+          }
+        } catch (err) {
+          console.error(`[API Drag] 토큰(${targetId}) 삭제 실패:`, err)
+        }
+      }
+
+      if (deletedCount > 0) {
+        console.log(`[API Drag] 🗑️ ${deletedCount}개의 토큰을 삭제했습니다.`)
+        // 화면에서 선택된 파란색 테두리 등을 깔끔하게 초기화합니다.
+        clearSelection()
+      }
+    })()
   }
 }
 

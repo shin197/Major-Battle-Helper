@@ -1,22 +1,29 @@
 // utils/mouse-tracker.ts
 
-// 1. 마지막 마우스 위치를 저장할 전역 변수 (기본값: 화면 정중앙)
+import { getBoardTable } from "./elements"
+
 export const lastMousePos = {
   x: window.innerWidth / 2,
   y: window.innerHeight / 2
 }
 
-// 2. 평소에 마우스가 움직일 때마다 위치를 갱신
+let fallbackBoardElement: HTMLElement | null = null
+
 export function initMouseTracker() {
   document.addEventListener(
     "pointermove",
     (e: PointerEvent) => {
       lastMousePos.x = e.clientX
       lastMousePos.y = e.clientY
-      const pos = getGridCoordinateFromMouse()
-      console.debug(
-        `[MouseTracker] Updated mouse position: (${pos.x}, ${pos.y})`
-      )
+      getGridCoordinateFromMouse(e.clientX, e.clientY) // 보드판이 감지된 순간 좌표 변환도 시도해봄
+      const target = e.target as HTMLElement
+      if (
+        target &&
+        target.tagName === "DIV" &&
+        target.offsetWidth > window.innerWidth * 0.5
+      ) {
+        fallbackBoardElement = target
+      }
     },
     { capture: true, passive: true }
   )
@@ -27,37 +34,55 @@ export function getGridCoordinateFromMouse(
   clientX = lastMousePos.x,
   clientY = lastMousePos.y
 ) {
-  // 코코포리아의 토큰들이 담기는 가장 상위 컨테이너를 찾습니다.
-  // (보통 줌/팬 transform이 걸려있는 드래그 가능한 보드판입니다)
-  const boardElement = document.querySelector<HTMLElement>(
-    'div[style*="transform"]'
-  ) // 고쳐야함 (anchor로 붙잡아둘 필요가 있어보임)
-
-  // 코코포리아 기본 그리드 사이즈 (캐릭터 생성 시 x:1, y:1 은 보통 24px 또는 48px 단위입니다)
+  const zoomEl = getBoardElement()
   const GRID_SIZE = 24
 
-  if (boardElement) {
-    // getBoundingClientRect()는 현재 화면의 줌과 팬(이동)이 모두 반영된 실제 DOM의 크기와 위치를 반환합니다.
-    const rect = boardElement.getBoundingClientRect()
+  if (zoomEl) {
+    // 1. Zoom(배율) 값 직접 추출
+    // "transform: scale(0.6);" 문자열에서 0.6 추출
+    const scaleMatch = zoomEl.style.transform.match(/scale\(([^)]+)\)/)
+    const scale = scaleMatch ? parseFloat(scaleMatch[1]) : 1
 
-    // transform: scale() 값 알아내기 (줌 배율)
-    // getBoundingClientRect의 width와 원래 offsetWidth의 비율을 계산하여 줌 배율을 알아냅니다.
-    const scale = rect.width / (boardElement.offsetWidth || 1)
+    // 2. 화면 상의 보드(0,0) 영점 좌표 가져오기
+    // 부모의 translate(이동) 값이 모두 반영된 최종 화면 좌표계(left, top)가 나옵니다.
+    const rect = zoomEl.getBoundingClientRect()
 
-    // 마우스 좌표에서 보드의 현재 이동된 위치(rect.left/top)를 빼서 순수 보드판 내의 픽셀 좌표를 구합니다.
+    // 3. 실제 마우스 좌표에서 보드의 영점을 빼고, 현재 줌 배율로 나누어 실제 보드 내부 픽셀 구하기
     const boardPixelX = (clientX - rect.left) / scale
     const boardPixelY = (clientY - rect.top) / scale
 
-    // 픽셀을 그리드 단위로 변환하고 반올림합니다.
+    // 4. 그리드 단위(24)로 쪼개고 반올림
     const gridX = Math.round(boardPixelX / GRID_SIZE)
     const gridY = Math.round(boardPixelY / GRID_SIZE)
+
+    // 콘솔에서 테스트하기 쉽게 로그 출력 (나중에 지우셔도 됩니다)
+    // console.log(
+    //   `🎯 [Tracker] 화면좌표(${clientX}, ${clientY}) -> 그리드좌표(${gridX}, ${gridY}) / 줌배율: ${scale}`
+    // )
 
     return { x: gridX, y: gridY }
   }
 
-  // 만약 보드 요소를 찾지 못했다면 화면 중앙을 기준으로 임의의 그리드값을 반환 (안전장치)
+  // 보드판을 못 찾았을 때의 최후 안전장치
   return {
     x: Math.round(clientX / GRID_SIZE),
     y: Math.round(clientY / GRID_SIZE)
   }
+}
+
+export function getBoardElement(): HTMLElement | null {
+  // 스크린샷에서 확인된 직계 조상 노드의 특징: style 속성에 "scale"이 포함되어 있음
+  const zoomElements = Array.from(
+    document.querySelectorAll<HTMLElement>('div[style*="scale"]')
+  )
+
+  for (const el of zoomElements) {
+    // scale이 적용된 div 중, 실제로 그 안에 무언가 들어있는 것을 진짜 보드판으로 간주
+    if (el.children.length > 0) {
+      return el
+    }
+  }
+
+  // 찾지 못했다면 빈 공간(배경) 클릭 시 저장된 요소 반환
+  return fallbackBoardElement
 }
