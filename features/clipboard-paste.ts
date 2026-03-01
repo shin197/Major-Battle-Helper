@@ -26,7 +26,7 @@ export function initCustomClipboard() {
         // ==========================================
         if (
           parsed &&
-          parsed.kind === "battleHelperBundle" &&
+          parsed.kind === "ccfTokenBundle" &&
           Array.isArray(parsed.items)
         ) {
           e.preventDefault()

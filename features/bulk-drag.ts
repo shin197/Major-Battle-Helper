@@ -660,7 +660,7 @@ const onKeyDown = (e: KeyboardEvent) => {
       }
 
       const clipboardText = JSON.stringify({
-        kind: "battleHelperBundle",
+        kind: "ccfTokenBundle",
         items: bundleItems
       })
 

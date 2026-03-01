@@ -5,10 +5,14 @@ import { initChatInputBox } from "~features/chat-input-box"
 import { initCustomClipboard } from "~features/clipboard-paste"
 import { initSlotShortcuts } from "~features/slot-shortcut"
 import { bootstrapUiAnchors } from "~utils/anchors"
+import {
+  initSettingsBridge,
+  loadFeatures,
+  type FeatureDefinition
+} from "~utils/feature-manager"
+// 👈 추가
 import { initMouseTracker } from "~utils/mouse-tracker"
 
-import { initCopyFaces } from "../features/copy-faces"
-import { evalChatInputBox } from "../features/enter-eval"
 import { initChatLogPager } from "../features/log-pager"
 import { initToastObserver } from "../utils/isolated/toast"
 
@@ -18,58 +22,30 @@ export const config: PlasmoCSConfig = {
   all_frames: true
 }
 
-// .env 파일의 값을 상수로 가져옴
 const IS_MAJOR_BATTLE = process.env.PLASMO_PUBLIC_MAJOR_BATTLE === "true"
 
-try {
-  ;(async () => {
-    await bootstrapUiAnchors()
-  })()
-} catch (e) {
-  console.error("UI 앵커 초기화 실패:", e)
-}
+// 💡 켜고 끌 수 있는 기능들을 배열로 정리합니다.
+const isolatedFeatures: FeatureDefinition[] = [
+  {
+    id: "ui-anchors",
+    name: "UI 앵커",
+    init: bootstrapUiAnchors,
+    defaultEnabled: true
+  },
+  {
+    id: "toast",
+    name: "토스트 관찰자",
+    init: initToastObserver,
+    defaultEnabled: true
+  },
+  { id: "slot-shortcuts", name: "슬롯 단축키", init: initSlotShortcuts },
+  { id: "chat-input", name: "채팅 입력창", init: initChatInputBox },
+  { id: "log-pager", name: "채팅 로그 페이저", init: initChatLogPager },
+  { id: "clipboard", name: "커스텀 클립보드", init: initCustomClipboard },
+  { id: "mouse-tracker", name: "마우스 추적기", init: initMouseTracker }
+]
 
-try {
-  initToastObserver()
-} catch (e) {
-  console.error("토스트 초기화 실패:", e)
-}
-try {
-  initCopyFaces()
-} catch (e) {
-  console.error("표정복사 로드 실패:", e)
-}
-try {
-  initSlotShortcuts()
-} catch (e) {
-  console.error("슬롯 단축키 로드 실패:", e)
-}
-try {
-  initChatInputBox()
-} catch (e) {
-  console.error("채팅 입력창 초기화 실패:", e)
-}
-try {
-  initChatLogPager()
-} catch (e) {
-  console.error("채팅 로그 페이저 로드 실패:", e)
-}
-try {
-  initCustomClipboard()
-} catch (e) {
-  console.error("커스텀 클립보드 로드 실패:", e)
-}
+// 실행!
+loadFeatures(isolatedFeatures)
 
-try {
-  initMouseTracker()
-} catch (e) {
-  console.error("마우스 추적기 초기화 실패:", e)
-}
-
-try {
-  if (!IS_MAJOR_BATTLE) {
-    document.addEventListener("keydown", evalChatInputBox, true)
-  }
-} catch (e) {
-  console.error("채팅창 수식 기능 로드 실패:", e)
-}
+initSettingsBridge()

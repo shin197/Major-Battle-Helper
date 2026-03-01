@@ -91,9 +91,7 @@ function handleLine(el: HTMLElement, currentBox: HTMLElement) {
   el.dataset.helper = "dice-marked"
 }
 
-;(async () => {
-  /* ------------- 여기부터 async/await 마음껏 사용 -------------- */
-
+export async function initDiceRollEffect() {
   const TAB_LIST_SEL =
     "#root > div > div.MuiDrawer-root.MuiDrawer-docked > div > div > form > \
      header div.MuiTabs-scroller.MuiTabs-hideScrollbar.MuiTabs-scrollableX"
@@ -121,9 +119,7 @@ function handleLine(el: HTMLElement, currentBox: HTMLElement) {
     attributes: true,
     attributeFilter: ["aria-selected"]
   })
-
-  /* -------------------- 함수 정의 -------------------- */
-})()
+}
 
 async function getActiveBtn(root: HTMLElement) {
   // 이미 선택된 것이 있으면 바로 반환

@@ -1,9 +1,14 @@
 import { getChatInputBox } from "~utils/elements"
 
+import { evalChatInputBox } from "./enter-eval"
+
 // 전역 변수로 히스토리 상태 관리 (모듈 최상단에 선언)
 const chatHistory: string[] = []
 let historyIndex = -1
 let savedCurrentInput = "" // 히스토리를 위로 올리기 직전에 치고 있던 텍스트 보관용
+
+// .env 파일의 값을 상수로 가져옴
+const IS_MAJOR_BATTLE = process.env.PLASMO_PUBLIC_MAJOR_BATTLE === "true"
 
 function enableAutoClosingPairs(ev: KeyboardEvent) {
   // TypeScript 에러 방지를 위해 Record 타입 지정
@@ -213,4 +218,11 @@ function replaceInputText(ta: HTMLTextAreaElement, text: string) {
 export function initChatInputBox() {
   document.addEventListener("keydown", enableAutoClosingPairs, true)
   document.addEventListener("keydown", enableChatHistory, true)
+  try {
+    if (!IS_MAJOR_BATTLE) {
+      document.addEventListener("keydown", evalChatInputBox, true)
+    }
+  } catch (e) {
+    console.error("채팅창 수식 기능 로드 실패:", e)
+  }
 }
