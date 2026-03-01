@@ -69,7 +69,6 @@ export function transformMessage(
 function escapeRegExp(string: string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 }
-
 export async function handleStatCommand(
   character: CcfoliaCharacter | null, // 대상 지정이 기본이 되므로 null 허용
   commandLine: string
@@ -106,6 +105,7 @@ export async function handleStatCommand(
 
   const statusUpdates: Record<string, number> = {}
   const paramUpdates: Record<string, string> = {}
+  let initiativeUpdate: number | undefined = undefined // ✨ initiative 업데이트용 변수 추가
 
   for (const part of parts) {
     // 3. 파싱: 라벨 + 연산자(+, -, =, :) + 값
@@ -127,6 +127,32 @@ export async function handleStatCommand(
           `[BattleHelper] Param not found for string assignment: ${label}`
         )
       }
+      continue
+    }
+
+    // --- [기능 추가] initiative 처리 ---
+    if (label === "initiative" || label === "i_") {
+      let finalValStr = valStr
+      const calculated = evaluateMath(valStr)
+      if (calculated) finalValStr = calculated
+
+      const isNumericOp = operator === "+" || operator === "-"
+      // ✨ initiative는 소수점이 들어갈 수 있으므로 parseFloat 사용
+      const numVal = parseFloat(finalValStr)
+
+      if (isNaN(numVal) && isNumericOp) continue
+
+      let currentVal =
+        initiativeUpdate !== undefined
+          ? initiativeUpdate
+          : targetCharacter.initiative || 0 // 기본값이 없을 경우 0으로 간주
+
+      let newValue = currentVal
+      if (operator === "=" && !isNaN(numVal)) newValue = numVal
+      else if (operator === "+") newValue += numVal
+      else if (operator === "-") newValue -= numVal
+
+      initiativeUpdate = newValue
       continue
     }
 
@@ -172,7 +198,6 @@ export async function handleStatCommand(
           if (operator === "+") newValue = String(currentInt + numVal)
           else if (operator === "-") newValue = String(currentInt - numVal)
         } else {
-          console.warn(`[BattleHelper] Non-numeric param math: ${part}`)
           continue
         }
       } else if (operator === "=") {
@@ -187,12 +212,15 @@ export async function handleStatCommand(
   // 4. API 호출
   const hasStatusUpdates = Object.keys(statusUpdates).length > 0
   const hasParamUpdates = Object.keys(paramUpdates).length > 0
+  const hasInitiativeUpdate = initiativeUpdate !== undefined
 
-  if (hasStatusUpdates || hasParamUpdates) {
+  // 업데이트할 내용이 하나라도 있다면 전송
+  if (hasStatusUpdates || hasParamUpdates || hasInitiativeUpdate) {
     try {
       await ccf.patchCharacter(targetCharacter.name, {
         status: hasStatusUpdates ? statusUpdates : undefined,
-        params: hasParamUpdates ? paramUpdates : undefined
+        params: hasParamUpdates ? paramUpdates : undefined,
+        initiative: hasInitiativeUpdate ? initiativeUpdate : undefined // ✨ initiative 페이로드 추가
       })
       showToast(
         `✅ 캐릭터 '${targetCharacter.name}'의 업데이트가 완료되었습니다.`
@@ -202,6 +230,137 @@ export async function handleStatCommand(
     }
   }
 }
+// export async function handleStatCommand(
+//   character: CcfoliaCharacter | null, // 대상 지정이 기본이 되므로 null 허용
+//   commandLine: string
+// ) {
+//   let content = commandLine.replace(/^\/(stat|s|ㄴ)\s+/, "").trim()
+//   if (!content) return
+
+//   let targetCharacter = character
+
+//   // 1. 대상 캐릭터 지정 파싱: /stat [캐릭터 이름] HP-5
+//   const targetMatch = content.match(/^\[(.*?)\]\s*(.*)$/)
+//   if (targetMatch) {
+//     const targetName = targetMatch[1].trim()
+//     content = targetMatch[2].trim() // [이름] 뒷부분의 실제 명령어들
+
+//     // API를 통해 지정된 캐릭터 데이터를 가져옴
+//     const fetchedCharacter = await ccf.getCharacterByName(targetName)
+//     if (!fetchedCharacter) {
+//       showToast(`❗ 캐릭터 '${targetName}'를 찾을 수 없습니다.`)
+//       return
+//     }
+//     targetCharacter = fetchedCharacter
+//   }
+
+//   // 대상 캐릭터가 결국 없다면 에러 처리
+//   if (!targetCharacter) {
+//     showToast(`❗ 명령을 적용할 대상 캐릭터가 없습니다.`)
+//     return
+//   }
+
+//   // 2. 명령어 분리
+//   const parts = content.split(/[\s,]+/).filter((p) => p.length > 0)
+//   if (parts.length === 0) return
+
+//   const statusUpdates: Record<string, number> = {}
+//   const paramUpdates: Record<string, string> = {}
+
+//   for (const part of parts) {
+//     // 3. 파싱: 라벨 + 연산자(+, -, =, :) + 값
+//     const match = part.match(/^(.+?)([\+\-\=\:])(.*)$/)
+//     if (!match) {
+//       console.warn(`[BattleHelper] Invalid format: ${part}`)
+//       continue
+//     }
+
+//     const [, label, operator, valStr] = match
+
+//     // --- [기능 추가] 콜론(:) 연산자 처리 ---
+//     if (operator === ":") {
+//       const targetParam = targetCharacter.params.find((p) => p.label === label)
+//       if (targetParam) {
+//         paramUpdates[label] = valStr
+//       } else {
+//         console.warn(
+//           `[BattleHelper] Param not found for string assignment: ${label}`
+//         )
+//       }
+//       continue
+//     }
+
+//     // --- 기존 로직 (+, -, =) ---
+//     let finalValStr = valStr
+//     const calculated = evaluateMath(valStr)
+//     if (calculated) finalValStr = calculated
+
+//     const isNumericOp = operator === "+" || operator === "-"
+//     const numVal = parseInt(finalValStr, 10)
+
+//     // A. Status 검색 (숫자형)
+//     const targetStatus = targetCharacter.status.find((s) => s.label === label)
+//     if (targetStatus) {
+//       if (isNaN(numVal) && isNumericOp) continue
+
+//       let currentVal =
+//         statusUpdates[label] !== undefined
+//           ? statusUpdates[label]
+//           : targetStatus.value
+
+//       let newValue = currentVal
+//       if (operator === "=" && !isNaN(numVal)) newValue = numVal
+//       else if (operator === "+") newValue += numVal
+//       else if (operator === "-") newValue -= numVal
+
+//       statusUpdates[label] = newValue
+//       continue
+//     }
+
+//     // B. Params 검색 (문자열/숫자 혼용)
+//     const targetParam = targetCharacter.params.find((p) => p.label === label)
+//     if (targetParam) {
+//       let currentValStr =
+//         paramUpdates[label] !== undefined
+//           ? paramUpdates[label]
+//           : targetParam.value
+//       let newValue = currentValStr
+
+//       if (isNumericOp) {
+//         const currentInt = parseInt(currentValStr, 10)
+//         if (!isNaN(currentInt) && !isNaN(numVal)) {
+//           if (operator === "+") newValue = String(currentInt + numVal)
+//           else if (operator === "-") newValue = String(currentInt - numVal)
+//         } else {
+//           continue
+//         }
+//       } else if (operator === "=") {
+//         newValue = finalValStr
+//       }
+
+//       paramUpdates[label] = newValue
+//       continue
+//     }
+//   }
+
+//   // 4. API 호출
+//   const hasStatusUpdates = Object.keys(statusUpdates).length > 0
+//   const hasParamUpdates = Object.keys(paramUpdates).length > 0
+
+//   if (hasStatusUpdates || hasParamUpdates) {
+//     try {
+//       await ccf.patchCharacter(targetCharacter.name, {
+//         status: hasStatusUpdates ? statusUpdates : undefined,
+//         params: hasParamUpdates ? paramUpdates : undefined
+//       })
+//       showToast(
+//         `✅ 캐릭터 '${targetCharacter.name}'의 업데이트가 완료되었습니다.`
+//       )
+//     } catch (e) {
+//       showToast(`❌ 캐릭터 '${targetCharacter.name}' 업데이트에 실패했습니다.`)
+//     }
+//   }
+// }
 
 /** -----------------------------------------------
  * Main Handler: Ctrl + Enter

@@ -95,6 +95,7 @@ export const ccf = {
   patchCharacter: async (
     namePart: string,
     updates: {
+      initiative?: number
       status?: Record<string, number>
       params?: Record<string, string>
     }

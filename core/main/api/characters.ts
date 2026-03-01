@@ -231,6 +231,7 @@ export const characters = {
   patch: async (
     namePart: string,
     updates: {
+      initiative?: number
       status?: Record<string, number>
       params?: Record<string, string>
     }
@@ -246,6 +247,10 @@ export const characters = {
     let hasChanges = false
 
     // 2. Status 업데이트 처리
+    if (updates.initiative) {
+      updatePayload.initiative = updates.initiative
+      hasChanges = true
+    }
     if (updates.status) {
       const newStatus = target.status.map((s: any) => {
         // updates.status 키 중에 s.label을 포함하는 것이 있는지 확인
