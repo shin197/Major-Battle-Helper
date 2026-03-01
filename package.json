@@ -1,14 +1,17 @@
 {
   "name": "major-battle-helper",
   "displayName": "Major battle helper",
-  "version": "0.0.1",
-  "description": "CCFolia Major Battle Helper Extension",
+  "version": "1.0.0",
+  "description": "CCFolia Helper Extension",
   "author": "Skywindragoon",
   "scripts": {
     "dev": "plasmo dev",
     "build": "plasmo build --env=.env.dev --zip",
     "build:major": "plasmo build --env=.env.major --zip",
-    "build:public": "plasmo build --env=.env.public --zip"
+    "build:public": "plasmo build --env=.env.public --zip",
+    "predev": "node set-icon-major.js",
+    "prebuild:major": "node set-icon-major.js",
+    "prebuild:public": "node set-icon.js"
   },
   "dependencies": {
     "@plasmohq/storage": "^1.15.0",
@@ -27,6 +30,8 @@
     "typescript": "5.3.3"
   },
   "manifest": {
+    "name": "$PLASMO_PUBLIC_EXT_NAME",
+    "description": "$PLASMO_PUBLIC_EXT_DESC",
     "host_permissions": [
       "https://ccfolia.com/*"
     ],

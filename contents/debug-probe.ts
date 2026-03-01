@@ -15,11 +15,11 @@ export const config: PlasmoCSConfig = {
 // chrome.action.setBadgeText({ text: "ON" })
 
 // contents/debug-probe.ts
-chrome.runtime.sendMessage({
-  type: "SET_BADGE",
-  text: "ON", // 배지 글자
-  bg: "#4caf50" // 배경색 바꾸고 싶다면 옵션으로
-})
+// chrome.runtime.sendMessage({
+//   type: "SET_BADGE",
+//   text: "ON", // 배지 글자
+//   bg: "#4caf50" // 배경색 바꾸고 싶다면 옵션으로
+// })
 // setTimeout(async () => {
 //   console.log("테스트 시작: asdf")
 
