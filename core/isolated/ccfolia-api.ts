@@ -63,7 +63,8 @@ export const ccf = {
         status?: Record<string, number>
         params?: Record<string, string>
       }
-    ) => ccfoliaRPC<void>("characters.patch", namePart, updates)
+    ) => ccfoliaRPC<void>("characters.patch", namePart, updates),
+    delete: (charId: string) => ccfoliaRPC<void>("characters.delete", charId)
   },
   getCharacters: (filterType: "all" | "active" | "mine" | "status" = "all") =>
     ccfoliaRPC<CcfoliaCharacter[]>("characters.getCharacters", filterType),

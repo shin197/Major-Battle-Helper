@@ -1,3 +1,4 @@
+import { ccf } from "~core/isolated/ccfolia-api"
 import { findItemIdFromDom } from "~utils/main/token"
 import { generateRandomId } from "~utils/utils"
 
@@ -398,8 +399,13 @@ export const tokens = {
         throw new Error("deleteDoc 함수를 찾을 수 없습니다. (hijack.ts 확인)")
 
       let colName = ""
-      if (type === "roomCharacter") colName = "characters"
-      else if (type === "roomDice") colName = "dices"
+      if (type === "roomCharacter") {
+        console.warn(
+          "캐릭터 토큰은 직접 삭제할 수 없습니다. ccfolia API를 사용하세요."
+        )
+        return
+        // ccf.characters.delete(ccf.characters.) // ccfolia의 캐릭터 삭제 함수는 단순히 Firestore 문서를 삭제하는 게 아니라 관련된 참조들까지 싹 정리해줍니다. (예: 채팅창에서 캐릭터 이름이 사라지는 등)
+      } else if (type === "roomDice") colName = "dices"
       else if (type === "roomDeck") colName = "decks"
 
       const tokenRef = doc(collection(db, "rooms", roomId, colName), tokenId)

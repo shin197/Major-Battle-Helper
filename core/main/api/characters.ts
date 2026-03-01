@@ -83,7 +83,7 @@ export const characters = {
   /**
    * [삭제] 캐릭터 삭제
    */
-  delete: async (namePart: string) => {
+  delete: async (charId: string) => {
     const { fsTools, db, roomId } = getServices()
     const { doc, collection, deleteDoc } = fsTools // deleteDoc 사용
 
@@ -91,8 +91,8 @@ export const characters = {
 
     const target = characters
       .getCharacters("all")
-      .find((c: any) => c.name.includes(namePart))
-    if (!target) throw new Error(`'${namePart}' 캐릭터 없음`)
+      .find((c: any) => c._id === charId)
+    if (!target) throw new Error(`'${charId}' 캐릭터 없음`)
 
     if (!confirm(`정말 '${target.name}' 캐릭터를 삭제하시겠습니까?`)) return
 

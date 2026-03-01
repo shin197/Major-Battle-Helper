@@ -578,6 +578,10 @@ const onKeyDown = (e: KeyboardEvent) => {
         try {
           // ✨ ccf API를 호출하여 삭제 (ccfolia-api.ts에 해당 메서드가 구현되어 있어야 합니다)
           // 구현되어 있는 메서드 이름에 맞게 수정해 주세요. (예: remove, delete, deleteDoc 등)
+          if (targetType === "roomCharacter") {
+            continue
+          }
+
           if (ccf.tokens.delete) {
             await ccf.tokens.delete(targetId)
             deletedCount++
@@ -625,6 +629,9 @@ const onKeyDown = (e: KeyboardEvent) => {
 
         const tokenData = await fetchTokenData(domId)
         if (!tokenData) continue
+        if (tokenData._type === "roomCharacter") {
+          continue
+        }
 
         tokenDatas.push(tokenData)
 
@@ -646,6 +653,7 @@ const onKeyDown = (e: KeyboardEvent) => {
       // 3. 중심점 대비 상대 좌표(dx, dy) 계산 및 데이터 정제
       for (const tokenData of tokenDatas) {
         const { id, _id, owner, createdAt, updatedAt, ...cleanData } = tokenData
+
         if (
           tokenData._type === "roomItem" ||
           tokenData._type === "roomMarker"
