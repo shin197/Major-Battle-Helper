@@ -3,6 +3,7 @@ import type { PlasmoCSConfig } from "plasmo"
 
 import { initChatInputBox } from "~features/chat-input-box"
 import { initCustomClipboard } from "~features/clipboard-paste"
+import { initImageMagnifier } from "~features/magnifier"
 import { initSlotShortcuts } from "~features/slot-shortcut"
 import { bootstrapUiAnchors } from "~utils/anchors"
 import {
@@ -42,7 +43,8 @@ const isolatedFeatures: FeatureDefinition[] = [
   { id: "chat-input", name: "채팅 입력창", init: initChatInputBox },
   { id: "log-pager", name: "채팅 로그 페이저", init: initChatLogPager },
   { id: "clipboard", name: "커스텀 클립보드", init: initCustomClipboard },
-  { id: "mouse-tracker", name: "마우스 추적기", init: initMouseTracker }
+  { id: "mouse-tracker", name: "마우스 추적기", init: initMouseTracker },
+  { id: "alt-click", name: "이미지 돋보기", init: initImageMagnifier } // 👈 기능 추가!
 ]
 
 // 실행!

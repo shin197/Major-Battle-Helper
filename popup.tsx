@@ -308,9 +308,9 @@ export default function IndexPopup() {
         />
         <FeatureToggle
           id="alt-click"
-          label="핑 + 캐릭터 선택"
+          label="향상된 마우스 액션"
           description={
-            "`Ctrl+좌클릭`으로 핑을 찍고, `Alt + 좌클릭`으로 캐릭터 토큰을 선택하면 채팅창에 해당 캐릭터의 이름이 `[캐릭터]`로 입력됩니다."
+            "`Ctrl + 좌클릭`: 핑\n`Alt + 좌클릭`: 캐릭터 토큰 클릭시 채팅창에 해당 캐릭터의 이름이 `[캐릭터]`로 입력됩니다.\n`E (토큰 위에서)`: 이미지가 확대됩니다."
           }
           onToggle={handleSettingsChange}
         />
