@@ -20,13 +20,15 @@ export function waitForCoreEngine() {
 function startMessageListener(store: any) {
   store.subscribe(() => {
     const currentState = store.getState()
-    const myUid = currentState.app.state.uid
+    const myUid = currentState.app.user.uid
     const roomId = currentState.app.state.roomId
     const roomOwner = currentState.entities.rooms?.entities[roomId]?.owner
     const amIGM = myUid === roomOwner
 
     const messagesEntity = currentState.entities.roomMessages?.entities
     if (!messagesEntity) return
+
+    if (!amIGM) return
 
     const messageIds = currentState.entities.roomMessages.ids
     const recentIds = messageIds.slice(-5)
@@ -44,28 +46,8 @@ function startMessageListener(store: any) {
         return
       }
 
-      const msgOwner = msg.uid || msg.owner
-
-      if (msgOwner === myUid) {
-        // 내가 굴린 주사위일 때
-        processedMessageIds.add(msgId)
-        applyMajorBattleDiceResult(msgId, msg)
-      } else if (amIGM) {
-        // 내가 방장(GM)일 때, 다른 사람의 주사위를 1초 지연 처리
-        setTimeout(() => {
-          const checkState = store.getState()
-          const currentMsg = checkState.entities.roomMessages?.entities[msgId]
-
-          if (!currentMsg || currentMsg.extend?.roll?.critical) {
-            processedMessageIds.add(msgId)
-            return
-          }
-
-          processedMessageIds.add(msgId)
-          // GM 대신 판정 적용이 필요하다면 아래 주석 해제
-          // applyMajorBattleDiceResult(msgId, currentMsg)
-        }, 1000)
-      }
+      processedMessageIds.add(msgId)
+      applyMajorBattleDiceResult(msgId, msg)
     })
   })
 }
