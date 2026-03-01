@@ -2,6 +2,7 @@ import type { PlasmoCSConfig } from "plasmo"
 
 import { initTokenAltClick } from "~features/alt-click"
 import { initBulkDrag } from "~features/bulk-drag"
+import { initPingSystem } from "~features/ping" // 👈 임포트 추가
 import { waitForCoreEngine } from "~major-battle/main/dicebot"
 import {
   loadMainFeatures,
@@ -26,6 +27,11 @@ const mainFeatures: FeatureDefinition[] = [
     defaultEnabled: true
   },
   { id: "bulk-drag", name: "다중 드래그", init: initBulkDrag },
+  {
+    id: "alt-click",
+    name: "화면 핑 시스템",
+    init: initPingSystem
+  },
   { id: "alt-click", name: "알트 클릭", init: initTokenAltClick },
   {
     id: "major-battle",

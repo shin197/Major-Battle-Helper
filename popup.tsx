@@ -308,9 +308,9 @@ export default function IndexPopup() {
         />
         <FeatureToggle
           id="alt-click"
-          label="Alt+클릭 캐릭터 입력"
+          label="핑 + 캐릭터 선택"
           description={
-            "캐릭터 토큰을 `Alt + 좌클릭`하면 채팅창에 해당 캐릭터의 이름이 `[캐릭터]`로 입력됩니다."
+            "`Ctrl+좌클릭`으로 핑을 찍고, `Alt + 좌클릭`으로 캐릭터 토큰을 선택하면 채팅창에 해당 캐릭터의 이름이 `[캐릭터]`로 입력됩니다."
           }
           onToggle={handleSettingsChange}
         />
