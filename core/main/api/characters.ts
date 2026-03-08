@@ -54,6 +54,7 @@ export const characters = {
       active: true,
       secret: false,
       invisible: false,
+      hideStatus: false,
       owner: state.app.state.uid, // 내 캐릭터로 생성
       createdAt: Date.now(),
       updatedAt: Date.now()
@@ -185,7 +186,7 @@ export const characters = {
    */
   toggleProp: async (
     namePart: string,
-    prop: "active" | "invisible" | "secret"
+    prop: "active" | "invisible" | "secret" | "hideStatus"
   ) => {
     const { fsTools, db, roomId } = getServices()
     const { setDoc, doc, collection } = fsTools

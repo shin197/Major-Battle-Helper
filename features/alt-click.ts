@@ -5,26 +5,48 @@ import { getChatInputBox, getPanelRoot } from "~utils/elements"
 import { findItemIdFromDom } from "~utils/main/token"
 import { setNativeValue } from "~utils/utils"
 
+// ✨ 가장 최근에 마우스가 올라간 토큰의 ID를 저장하는 변수
+let lastHoveredTokenId: string | null = null
+
 export function initTokenAltClick() {
-  // 별도의 pointerdown 이벤트 리스너를 문서 전체에 등록합니다.
+  // ==========================================================
+  // 0. 마우스 호버링 토큰 정밀 추적기
+  // ==========================================================
+  document.addEventListener(
+    "pointermove",
+    (e: PointerEvent) => {
+      const target = e.target as HTMLElement
+      const root = getPanelRoot(target)
+
+      // 타겟이나 부모 요소에서 토큰 ID를 추출합니다.
+      const itemId =
+        findItemIdFromDom(target) || (root ? findItemIdFromDom(root) : null)
+
+      // 허공을 가리키면 null, 토큰 위면 해당 ID를 저장합니다.
+      lastHoveredTokenId = itemId
+    },
+    { passive: true }
+  )
+
+  // ==========================================================
+  // 1. 기존 기능: Alt + 좌클릭으로 캐릭터 이름 채팅창에 입력
+  // ==========================================================
   document.addEventListener(
     "pointerdown",
     (e: PointerEvent) => {
       if (!e.isTrusted) return
 
-      // Alt + 좌클릭 감지
       if (e.button === 0 && e.altKey) {
         const root = getPanelRoot(e.target as HTMLElement)
         if (!root) return
 
-        // ✨ 중요: 다른 이벤트(드래그 등)가 실행되지 않도록 여기서 완벽히 차단
         e.preventDefault()
         e.stopImmediatePropagation()
         e.stopPropagation()
 
         const targetId =
           findItemIdFromDom(e.target as HTMLElement) || findItemIdFromDom(root)
-        if (!targetId) return // 비동기 처리
+        if (!targetId) return
         ;(async () => {
           try {
             const character = await ccf.characters.getById(targetId)
@@ -58,9 +80,39 @@ export function initTokenAltClick() {
         })()
       }
     },
-    {
-      // ✨ 핵심: React나 다른 스크립트보다 먼저 이벤트를 가로채기 위해 capture를 true로 설정
-      capture: true
-    }
+    { capture: true }
+  )
+
+  // ==========================================================
+  // 2. 신규 기능: 토큰 위에서 'A' 키를 눌러 hideStatus 토글
+  // ==========================================================
+  document.addEventListener(
+    "keydown",
+    (e: KeyboardEvent) => {
+      const activeTag = (e.target as HTMLElement)?.tagName
+      const isInput =
+        activeTag === "INPUT" ||
+        activeTag === "TEXTAREA" ||
+        (e.target as HTMLElement)?.isContentEditable
+      if (isInput) return
+
+      if (e.key === "a" || e.key === "A") {
+        // ✨ 핵심: 좌표 계산을 버리고, pointermove가 기억해둔 확실한 ID를 사용합니다.
+        if (!lastHoveredTokenId) return
+        ;(async () => {
+          try {
+            // ID로 캐릭터 데이터를 가져옵니다.
+            const character = await ccf.characters.getById(lastHoveredTokenId)
+            if (!character || !character.name) return
+
+            // 이름으로 toggleCharacterProp API를 호출하여 상태를 숨김/표시 전환합니다.
+            await ccf.toggleCharacterProp(character.name, "hideStatus")
+          } catch (err) {
+            console.error("[BattleHelper] 상태 표시 토글 실패:", err)
+          }
+        })()
+      }
+    },
+    { capture: true }
   )
 }

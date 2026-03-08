@@ -86,7 +86,7 @@ export const ccf = {
 
   toggleCharacterProp: (
     namePart: string,
-    prop: "active" | "invisible" | "secret"
+    prop: "active" | "invisible" | "secret" | "hideStatus"
   ) => ccfoliaRPC<void>("characters.toggleProp", namePart, prop),
 
   setCharacterCommands: async (namePart: string, newCommands: string) =>
