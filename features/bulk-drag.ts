@@ -1,6 +1,5 @@
 import { getPanelRoot, getPanels } from "~utils/elements"
 import { showToast } from "~utils/isolated/toast"
-import { getGridCoordinateFromMouse, lastMousePos } from "~utils/mouse-tracker"
 
 import { ccf } from "../core/isolated/ccfolia-api"
 import { findItemIdFromDom } from "../utils/main/token"
@@ -42,17 +41,6 @@ const deselectPanel = (p: HTMLElement) => {
   p.setAttribute(SELECTED_ATTR, "false")
   p.removeAttribute("data-bulk-locked")
 }
-
-// const getPanels = (): HTMLElement[] => {
-//   return Array.from(
-//     document.querySelectorAll('[aria-roledescription="draggable"]')
-//   ) as HTMLElement[]
-// }
-
-// const getPanelRoot = (t: EventTarget | null): HTMLElement | null => {
-//   if (!(t instanceof Element)) return null
-//   return t.closest('[aria-roledescription="draggable"]') as HTMLElement | null
-// }
 
 const isEventInsideSelectionArea = (e: Event): boolean => {
   if (!(e.target instanceof Element)) return false
@@ -576,8 +564,6 @@ const onKeyDown = (e: KeyboardEvent) => {
         const targetType = tokenData._type
 
         try {
-          // ✨ ccf API를 호출하여 삭제 (ccfolia-api.ts에 해당 메서드가 구현되어 있어야 합니다)
-          // 구현되어 있는 메서드 이름에 맞게 수정해 주세요. (예: remove, delete, deleteDoc 등)
           if (targetType === "roomCharacter") {
             continue
           }
