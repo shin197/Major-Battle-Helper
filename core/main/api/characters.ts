@@ -103,13 +103,13 @@ export const characters = {
   },
 
   /**
-   * 캐릭터 이름(일부)으로 캐릭터 객체 찾기
+   * 캐릭터 이름으로 캐릭터 객체 찾기
    */
-  getByName: (namePart: string): CcfoliaCharacter | undefined => {
+  getByName: (name: string): CcfoliaCharacter | undefined => {
     const { rc } = getServices()
     return rc.ids
       .map((id: string) => rc.entities[id])
-      .find((c: CcfoliaCharacter) => c.name?.includes(namePart))
+      .find((c: CcfoliaCharacter) => c.name === name)
   },
 
   getById: (charId: string): CcfoliaCharacter | undefined => {
@@ -123,12 +123,12 @@ export const characters = {
    * - labelPart: 스테이터스 라벨 (예: "HP", "정신력")
    * - value: 설정할 값
    */
-  setStatus: async (namePart: string, labelPart: string, value: number) => {
+  setStatus: async (name: string, labelPart: string, value: number) => {
     const { fsTools, db, roomId, rc } = getServices()
     const { setDoc, doc, collection } = fsTools
 
-    const target = characters.getByName(namePart)
-    if (!target) throw new Error(`캐릭터 '${namePart}'를 찾을 수 없습니다.`)
+    const target = characters.getByName(name)
+    if (!target) throw new Error(`캐릭터 '${name}'를 찾을 수 없습니다.`)
 
     const newStatus = target.status.map((s) => {
       if (s.label.includes(labelPart)) {
@@ -154,12 +154,12 @@ export const characters = {
    * 캐릭터의 파라미터(텍스트) 변경 (STR, DEX, 메모 등)
    * - newValue: 문자열로 입력해야 함
    */
-  setParam: async (namePart: string, labelPart: string, newValue: string) => {
+  setParam: async (name: string, labelPart: string, newValue: string) => {
     const { fsTools, db, roomId } = getServices()
     const { setDoc, doc, collection } = fsTools
 
-    const target = characters.getByName(namePart)
-    if (!target) throw new Error(`캐릭터 '${namePart}'를 찾을 수 없습니다.`)
+    const target = characters.getByName(name)
+    if (!target) throw new Error(`캐릭터 '${name}'를 찾을 수 없습니다.`)
 
     const newParams = target.params.map((p) => {
       if (p.label === labelPart) {
@@ -207,15 +207,38 @@ export const characters = {
     console.log(`[API] ${target.name}: ${prop} -> ${newValue}`)
   },
 
-  /**
-   * 캐릭터 채팅 명령어(Palette) 수정
-   */
-  setCommands: async (namePart: string, newCommands: string) => {
+  togglePropById: async (
+    id: string,
+    prop: "active" | "invisible" | "secret" | "hideStatus"
+  ) => {
     const { fsTools, db, roomId } = getServices()
     const { setDoc, doc, collection } = fsTools
 
-    const target = characters.getByName(namePart)
-    if (!target) throw new Error(`캐릭터 '${namePart}'를 찾을 수 없습니다.`)
+    const target = characters.getById(id)
+    if (!target) throw new Error(`캐릭터 '${id}'를 찾을 수 없습니다.`)
+
+    const newValue = !target[prop]
+    const targetRef = doc(
+      collection(db, "rooms", roomId, "characters"),
+      target._id
+    )
+
+    const payload: any = { updatedAt: Date.now() }
+    payload[prop] = newValue
+
+    await setDoc(targetRef, payload, { merge: true })
+    console.log(`[API] ${target.name}: ${prop} -> ${newValue}`)
+  },
+
+  /**
+   * 캐릭터 채팅 명령어(Palette) 수정
+   */
+  setCommands: async (name: string, newCommands: string) => {
+    const { fsTools, db, roomId } = getServices()
+    const { setDoc, doc, collection } = fsTools
+
+    const target = characters.getByName(name)
+    if (!target) throw new Error(`캐릭터 '${name}'를 찾을 수 없습니다.`)
 
     const targetRef = doc(
       collection(db, "rooms", roomId, "characters"),
@@ -230,7 +253,7 @@ export const characters = {
   },
 
   patch: async (
-    namePart: string,
+    name: string,
     updates: {
       initiative?: number
       status?: Record<string, number>
@@ -241,8 +264,8 @@ export const characters = {
     const { setDoc, doc, collection } = fsTools
 
     // 1. 캐릭터 찾기
-    const target = characters.getByName(namePart)
-    if (!target) throw new Error(`캐릭터 '${namePart}'를 찾을 수 없습니다.`)
+    const target = characters.getByName(name)
+    if (!target) throw new Error(`캐릭터 '${name}'를 찾을 수 없습니다.`)
 
     const updatePayload: any = { updatedAt: Date.now() }
     let hasChanges = false
@@ -293,9 +316,9 @@ export const characters = {
     }
   },
 
-  inspect: (namePart: string) => {
-    const char = characters.getByName(namePart)
-    console.log(`[API] Inspect '${namePart}':`, char)
+  inspect: (name: string) => {
+    const char = characters.getByName(name)
+    console.log(`[API] Inspect '${name}':`, char)
     return char
   }
 }

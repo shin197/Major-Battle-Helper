@@ -311,16 +311,9 @@ function calcSuccess(rawLine: string): DiceResult {
     )
     const hasDC = flags.some((f) => f.startsWith("DC="))
     const DC = Number((flags.find((f) => /^DC=\d+$/.test(f)) ?? "1").slice(3))
-    const successBonus = flags
-      .filter((f) => /^S=[+-]?\d+$/.test(f))
-      .map((f) => Number(f.slice(2)))
-      .reduce((a, b) => a + b, 0)
-
     const level = Number(
       (flags.find((f) => /^Lv[-]?\d+$/.test(f)) ?? "1").slice(2)
     )
-
-    // console.log(successBonus)
 
     let S = 0
 
@@ -328,71 +321,53 @@ function calcSuccess(rawLine: string): DiceResult {
     let crit = 0
     let passDC = true
     let critCount = 0
-
-    let exS = 0
-    let bonusDie = 0
-    // const secondaryDie = dice[count] ?? 0
-    const secDiceCount = dice.length - count
-    for (let j = 0; j < secDiceCount; j++) {
-      const secondaryDie = dice[count + j]
-      // if (secondaryDie === 1) {
-      //   exFail = true
-      //   bonusHit = false
-      // } else {
-      //   allExFail = false
-      // }
-      exS += secondaryDie
-      if (j === secDiceCount - 1) {
-        bonusDie = secondaryDie
-      }
-      // if (secondaryDie === tySize && !exFail) {
-      //   bonusHit = true
-      // }
-    }
-    exS += successBonus
-    // if (bonusHit) {
-    //   exS += plus
-    // }
-    // if (secDiceCount == 0) {
-    //   allExFail = false
-    // }
-    let bonusHit = false
-    let bonusCount = 0
+    let anyBonusHit = false
 
     for (var i = 0; i < count; i++) {
       const primaryDie = dice[i] ?? 0
+      const secondaryDie = dice[count] ?? 0
+      const exDiceCount = dice.length - count - 1
       crit = 0
-      if (primaryDie === 1) {
+      let exS = 0
+      let exFail = false
+      let bonusHit = false
+      for (let j = 0; j < exDiceCount; j++) {
+        const num = dice[count + 1 + j]
+        if (num === 1 || secondaryDie == 1) {
+          exFail = true
+        } else {
+          exS += num
+          if (num === tySize) {
+            S += plus
+            bonusHit = true
+          }
+        }
+      }
+      if (primaryDie == 1 || exFail) {
         unitCount--
         // S = 0
-        if (primaryDie === 1 && bonusDie === 1) {
+        if (primaryDie === 1 && secondaryDie === 1) {
           crit = -1
         }
         continue
       } else if (primaryDie < tySize - level && !hasBang) {
-        if (secDiceCount == 0) {
-          exS = primaryDie
-        }
-        S += exS
+        S += secondaryDie + exS
         crit = 1
       } else {
-        // if (secDiceCount > 0) {
-
-        // }
-        S += primaryDie + exS
+        S += primaryDie + secondaryDie + exS
         crit = 2
         critCount += 1
       }
-      if (bonusDie === primaryDie) {
+      if (secondaryDie === tySize) {
         S += plus
-        bonusCount += 1
         bonusHit = true
       }
+      if (bonusHit) anyBonusHit = true
       if (hasDC && S < DC) {
         passDC = false
         crit = 0
       }
-      if (crit === 2 && bonusDie === primaryDie) {
+      if (crit === 2 && bonusHit) {
         crit = 3
       }
     }
@@ -410,8 +385,7 @@ function calcSuccess(rawLine: string): DiceResult {
       ...(groupified ? { unitCount } : {}),
       ...(hasDC ? { passDC } : {}),
       ...(critCount > 0 ? { critCount } : {}),
-      bonusHit,
-      ...(bonusCount > 0 ? { bonusCount } : {})
+      bonusHit: anyBonusHit
     }
     setLastDiceResult(diceResult)
     return diceResult

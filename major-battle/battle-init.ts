@@ -44,7 +44,14 @@ export async function capStatus(mustCap: string[] = []) {
           }
         } else {
           // 일반적인 경우: 0 ~ Max 사이로 제한
-          newValue = Math.min(st.value, st.max)
+          if (st.label === "HP" && char.status.some((s) => s.label === "#")) {
+            newValue = Math.min(
+              st.value,
+              st.max * char.status.find((s) => s.label === "#")!.value
+            )
+          } else {
+            newValue = Math.min(st.value, st.max)
+          }
         }
 
         // 값이 달라져야만 업데이트 목록에 추가
@@ -220,13 +227,20 @@ export async function handleDmgCommand(
 
     let dmg = dmgAmount
 
+    if (dmgType.includes("절반")) {
+      dmg = Math.floor(dmg / 2)
+    }
+
     // 장갑을 횟수만큼 적용
     dmg -= armor * hitCount
 
     // 충격형 피해라면, 방어도에 50% 적용
     if (dmgType.includes("충격")) {
-      dmg = Math.floor(dmg / 2)
+      dmg -= armor * hitCount
     }
+    // if (dmgType.includes("충격")) {
+    //   dmg = Math.floor(dmg / 2)
+    // }
 
     // 방어도를 피해만큼 차감
     def -= Math.max(0, dmg)

@@ -5,6 +5,7 @@ export type DiceResult = {
   passDC?: boolean
   critCount?: number
   bonusHit?: boolean
+  bonusCount?: number
 }
 
 const KEY = "ccf:lastDiceResult"

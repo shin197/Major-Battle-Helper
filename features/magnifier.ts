@@ -116,15 +116,24 @@ function checkAndMagnify() {
 export function initImageMagnifier() {
   createOverlay()
 
-  // Ctrl 키가 눌렸을 때
+  // E 키가 눌렸을 때
   window.addEventListener("keydown", (e) => {
+    // ✨ 방어 로직: 현재 포커스된 요소가 텍스트 입력창이면 기능을 무시합니다.
+    const activeTag = (e.target as HTMLElement)?.tagName
+    const isInput =
+      activeTag === "INPUT" ||
+      activeTag === "TEXTAREA" ||
+      (e.target as HTMLElement)?.isContentEditable
+
+    if (isInput) return
+
     if ((e.key === "e" || e.key === "E") && !isCtrlPressed) {
       isCtrlPressed = true
       checkAndMagnify()
     }
   })
 
-  // Ctrl 키를 뗐을 때
+  // E 키를 뗐을 때
   window.addEventListener("keyup", (e) => {
     if (e.key === "e" || e.key === "E") {
       isCtrlPressed = false
@@ -132,7 +141,7 @@ export function initImageMagnifier() {
     }
   })
 
-  // Ctrl을 누른 채로 다른 토큰으로 마우스를 옮길 때 실시간으로 이미지 변경
+  // E를 누른 채로 다른 토큰으로 마우스를 옮길 때 실시간으로 이미지 변경
   window.addEventListener(
     "pointermove",
     () => {

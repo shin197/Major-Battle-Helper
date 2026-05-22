@@ -106,7 +106,7 @@ export function initTokenAltClick() {
             if (!character || !character.name) return
 
             // 이름으로 toggleCharacterProp API를 호출하여 상태를 숨김/표시 전환합니다.
-            await ccf.toggleCharacterProp(character.name, "hideStatus")
+            await ccf.toggleCharacterPropById(character._id, "hideStatus")
           } catch (err) {
             console.error("[BattleHelper] 상태 표시 토글 실패:", err)
           }
