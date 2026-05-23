@@ -2,11 +2,16 @@ import { getChatInputBox } from "~utils/elements"
 
 import { evalChatInputBox } from "./enter-eval"
 import { initMessageActions } from "./message-actions"
+import { ccf } from "~core/isolated/ccfolia-api"
+import { getCurrentCharacterName } from "./slot-shortcut"
+import { showToast } from "~utils/isolated/toast"
 
 // 전역 변수로 히스토리 상태 관리 (모듈 최상단에 선언)
 const chatHistory: string[] = []
 let historyIndex = -1
 let savedCurrentInput = "" // 히스토리를 위로 올리기 직전에 치고 있던 텍스트 보관용
+
+let editingMessageId: string | null = null
 
 // .env 파일의 값을 상수로 가져옴
 const IS_MAJOR_BATTLE = process.env.PLASMO_PUBLIC_MAJOR_BATTLE === "true"
@@ -100,9 +105,144 @@ function enableAutoClosingPairs(ev: KeyboardEvent) {
   }
 }
 
+function updateEditHighlight(id: string | null) {
+  let styleEl = document.getElementById("mb-edit-style")
+  if (!styleEl) {
+    styleEl = document.createElement("style")
+    styleEl.id = "mb-edit-style"
+    document.head.appendChild(styleEl)
+  }
+  if (id) {
+    styleEl.textContent = `
+      div[data-msg-id="${id}"] {
+        background-color: rgba(33, 150, 243, 0.15) !important;
+        outline: 2px solid rgb(33, 150, 243) !important;
+        border-radius: 4px;
+        transition: all 0.2s ease-in-out;
+      }
+    `
+  } else {
+    styleEl.textContent = ""
+  }
+}
+
+function exitEditMode(ta: HTMLTextAreaElement) {
+  if (!editingMessageId) return
+  editingMessageId = null
+  updateEditHighlight(null)
+}
+
+async function applyEdit(ta: HTMLTextAreaElement) {
+  if (!editingMessageId) return
+  const newText = ta.value.trim()
+  if (newText) {
+    try {
+      await ccf.messages.edit(editingMessageId, newText)
+      exitEditMode(ta)
+      replaceInputText(ta, "")
+    } catch (e) {
+      showToast("❌ 메시지 수정에 실패했습니다.")
+    }
+  } else {
+    // 텍스트가 없으면 수정 취소
+    exitEditMode(ta)
+  }
+}
+
+async function enterEditMode(ta: HTMLTextAreaElement, direction: "prev" | "next" = "prev") {
+  try {
+    const prevEditingId = editingMessageId
+    exitEditMode(ta) // 기존 하이라이트 지우기
+
+    const charName = getCurrentCharacterName()
+    const msgs = await ccf.messages.getAll()
+    if (!msgs || msgs.length === 0) return
+
+    let targetMsg: any = null
+
+    if (charName) {
+      let startIndex = direction === "prev" ? msgs.length - 1 : 0
+      if (prevEditingId) {
+        const prevIndex = msgs.findIndex((m: any) => (m.id || m._id) === prevEditingId)
+        if (prevIndex !== -1) {
+          startIndex = direction === "prev" ? prevIndex - 1 : prevIndex + 1
+        }
+      }
+
+      if (direction === "prev") {
+        for (let i = startIndex; i >= 0; i--) {
+          if (msgs[i].name === charName && msgs[i].type !== "system") {
+            targetMsg = msgs[i]
+            break
+          }
+        }
+      } else {
+        for (let i = startIndex; i < msgs.length; i++) {
+          if (msgs[i].name === charName && msgs[i].type !== "system") {
+            targetMsg = msgs[i]
+            break
+          }
+        }
+      }
+    } else {
+      showToast("❗ 캐릭터가 선택되지 않아 단축키로 수정할 수 없습니다.")
+      return
+    }
+
+    if (targetMsg && (targetMsg.id || targetMsg._id)) {
+      editingMessageId = targetMsg.id || targetMsg._id
+      replaceInputText(ta, targetMsg.text || "")
+      
+      updateEditHighlight(editingMessageId)
+      showToast("✏️ 메시지 수정 모드 (Esc: 취소, Enter: 적용)")
+    } else {
+      if (prevEditingId) {
+        // 복원
+        editingMessageId = prevEditingId
+        updateEditHighlight(editingMessageId)
+        showToast(direction === "prev" ? "❗ 더 이상 이전 메시지가 없습니다." : "❗ 더 이상 다음 메시지가 없습니다.")
+      } else {
+        showToast("❗ 수정할 최근 메시지를 찾을 수 없습니다.")
+      }
+    }
+  } catch (e) {
+    console.error("[BattleHelper] enterEditMode error:", e)
+  }
+}
+
 function enableChatHistory(ev: KeyboardEvent) {
   const ta = ev.target as HTMLTextAreaElement
   if (ta != getChatInputBox()) return
+
+  // ==========================================
+  // 0. 편집 모드 중 키보드 단축키 처리
+  // ==========================================
+  if (editingMessageId) {
+    if (ev.key === "ArrowUp" && ev.altKey) {
+      ev.preventDefault()
+      ev.stopImmediatePropagation()
+      enterEditMode(ta, "prev")
+      return
+    }
+    if (ev.key === "ArrowDown" && ev.altKey) {
+      ev.preventDefault()
+      ev.stopImmediatePropagation()
+      enterEditMode(ta, "next")
+      return
+    }
+    if (ev.key === "Escape") {
+      ev.preventDefault()
+      ev.stopImmediatePropagation()
+      exitEditMode(ta)
+      return
+    }
+    if (ev.key === "Enter" && !ev.shiftKey && !ev.isComposing && !ev.ctrlKey) {
+      ev.preventDefault()
+      ev.stopImmediatePropagation()
+      applyEdit(ta)
+      return
+    }
+  }
 
   // ==========================================
   // 1. 엔터키 감지: 채팅 전송 시 히스토리에 저장
@@ -129,6 +269,14 @@ function enableChatHistory(ev: KeyboardEvent) {
   // ==========================================
   if (ev.key === "ArrowUp" || ev.key === "ArrowDown") {
     const isModifierPressed = ev.altKey || ev.ctrlKey
+
+    // [특수 편집 모드] 히스토리 탐색 중이 아닐 때 Alt+Up
+    if (ev.key === "ArrowUp" && ev.altKey && historyIndex === chatHistory.length && !editingMessageId) {
+      ev.preventDefault()
+      ev.stopImmediatePropagation()
+      enterEditMode(ta, "prev")
+      return
+    }
 
     // 퍼지 파인더(Fuzzy Finder) 활성화 여부 확인
     const fuzzyMenu = document.querySelector(

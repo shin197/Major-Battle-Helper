@@ -140,6 +140,7 @@ export const ccf = {
 
   // ccf.messages
   messages: {
+    getAll: () => ccfoliaRPC<any[]>("messages.getAll"),
     delete: (messageId: string) => ccfoliaRPC<void>("messages.delete", messageId),
     edit: (messageId: string, newText: string) => ccfoliaRPC<void>("messages.edit", messageId, newText),
     sendSystemMessage: (text: string, channel?: { channel: string; channelName: string }) => 
