@@ -363,15 +363,32 @@ export async function handleStatCommand(
 // }
 
 /** -----------------------------------------------
- * Main Handler: Ctrl + Enter
+ * Main Handler: Enter or Ctrl + Enter
  * ----------------------------------------------*/
 export async function evalChatInputBox(ev: KeyboardEvent) {
-  if (!(ev.ctrlKey && ev.key === "Enter")) return
+  if (ev.key !== "Enter") return
 
   const ta = ev.target as HTMLElement
   if (ta != getChatInputBox()) return
   if (!(ta instanceof HTMLTextAreaElement) || !ta.id.startsWith("downshift"))
     return
+
+  const val = ta.value.trim()
+
+  // 0. 시스템 메시지 전송 가로채기 (일반 Enter 허용, Shift+Enter 무시)
+  if (!ev.shiftKey && (val.startsWith("/g ") || val.startsWith("/ㅎ "))) {
+    ev.preventDefault()
+    ev.stopPropagation()
+    const content = val.replace(/^\/(g|ㅎ)\s+/, "").trim()
+    if (content) {
+      await ccf.messages.sendSystemMessage(content)
+      setNativeValue(ta, "")
+    }
+    return
+  }
+
+  // 이후 로직은 Ctrl+Enter일 때만 동작
+  if (!ev.ctrlKey) return
 
   const charName = getCurrentCharacterName() || null
 

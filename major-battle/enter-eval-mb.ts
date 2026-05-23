@@ -24,12 +24,27 @@ export const config: PlasmoCSConfig = {
  * Main Handler: Ctrl + Enter
  * ----------------------------------------------*/
 export async function evalChatInputBoxMajorBattle(ev: KeyboardEvent) {
-  if (!(ev.ctrlKey && ev.key === "Enter")) return
-
+  if (ev.key !== "Enter") return
   const ta = ev.target as HTMLElement
   if (ta != getChatInputBox()) return
   if (!(ta instanceof HTMLTextAreaElement) || !ta.id.startsWith("downshift"))
     return
+
+  const val = ta.value.trim()
+
+  // 0. 시스템 메시지 전송 가로채기 (일반 Enter 허용, Shift+Enter 무시)
+  if (!ev.shiftKey && (val.startsWith("/g ") || val.startsWith("/ㅎ "))) {
+    ev.preventDefault()
+    ev.stopPropagation()
+    const content = val.replace(/^\/(g|ㅎ)\s+/, "").trim()
+    if (content) {
+      await ccf.messages.sendSystemMessage(content)
+      setNativeValue(ta, "")
+    }
+    return
+  }
+
+  if (!(ev.ctrlKey && ev.key === "Enter")) return
 
   const charName = getCurrentCharacterName() || null
 
@@ -76,7 +91,7 @@ export async function evalChatInputBoxMajorBattle(ev: KeyboardEvent) {
     }
     if (finalVal.startsWith("/cap")) {
       // 스탯 캐핑 처리
-      capStatus(["HP", "MP", "DEF", "AP", "EX", "STK"])
+      capStatus(["HP", "MP", "DEF", "EX"])
       finalVal = ""
     }
 

@@ -143,14 +143,9 @@ function pickFirestoreExports(mod: any): null | {
     const val = mod[key]
     if (typeof val === "function") {
       const fnStr = val.toString()
-
-      // Firebase V9 SDK의 특징적인 문자열 또는 함수 이름으로 유추
-      // 난독화 환경에서도 원본 이름(name) 속성이 남아있는 경우가 꽤 있습니다.
       const fnName = val.name || ""
 
-      if (fnStr.includes('"setDoc"') || fnName === "setDoc") {
-        setDoc = val
-      } else if (fnStr.includes('"deleteDoc"') || fnName === "deleteDoc") {
+      if (fnStr.includes('"deleteDoc"') || fnName === "deleteDoc") {
         deleteDoc = val
       } else if (fnStr.includes('"writeBatch"') || fnName === "writeBatch") {
         writeBatch = val
@@ -166,8 +161,19 @@ function pickFirestoreExports(mod: any): null | {
     }
   }
 
-  // 2. 동적 탐색 실패 시 알려진 Fallback (이전 버전의 코코포리아 난독화 키)
-  // 코코포리아 업데이트 시 바뀔 수 있으므로 1번(동적 탐색)이 주력입니다.
+  for (const key of Object.keys(mod)) {
+    const val = mod[key]
+    if (typeof val === "function" && val !== collection && val !== doc) {
+      try {
+        if (val.toString().includes('merge')) {
+          setDoc = val
+          break
+        }
+      } catch (e) {}
+    }
+  }
+
+  // 2. 동적 탐색 실패 시 알려진 Fallback
   setDoc = setDoc ?? mod.pl ?? mod.setDoc
   doc = doc ?? mod.JU ?? mod.doc
   collection = collection ?? mod.hJ ?? mod.collection

@@ -1,6 +1,7 @@
 import { getChatInputBox } from "~utils/elements"
 
 import { evalChatInputBox } from "./enter-eval"
+import { initMessageActions } from "./message-actions"
 
 // 전역 변수로 히스토리 상태 관리 (모듈 최상단에 선언)
 const chatHistory: string[] = []
@@ -222,7 +223,9 @@ export function initChatInputBox() {
     if (!IS_MAJOR_BATTLE) {
       document.addEventListener("keydown", evalChatInputBox, true)
     }
+    // 메시지 호버 삭제 버튼 기능 초기화
+    setTimeout(initMessageActions, 2000)
   } catch (e) {
-    console.error("채팅창 수식 기능 로드 실패:", e)
+    console.error("채팅창 기능 향상 로드 실패:", e)
   }
 }

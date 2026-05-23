@@ -28,6 +28,10 @@ export const buildAPI = () => {
     messages,
     getAllMessages: messages.getAll,
     modifyRollResult: messages.modifyRollResult,
+    deleteMessage: messages.delete,
+    sendSystemMessage: messages.sendSystemMessage,
+    sendMessageAsChar: messages.sendMessageAsChar,
+    sendDiceAsChar: messages.sendDiceAsChar,
     menus,
     getOpenMenuInfo: menus.getOpenMenuInfo,
     devtools

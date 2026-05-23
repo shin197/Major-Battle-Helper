@@ -89,6 +89,11 @@ export const ccf = {
     prop: "active" | "invisible" | "secret" | "hideStatus"
   ) => ccfoliaRPC<void>("characters.toggleProp", namePart, prop),
 
+  toggleCharacterPropById: (
+    id: string,
+    prop: "active" | "invisible" | "secret" | "hideStatus"
+  ) => ccfoliaRPC<void>("characters.togglePropById", id, prop),
+
   setCharacterCommands: async (namePart: string, newCommands: string) =>
     ccfoliaRPC<void>("characters.setCommands", namePart, newCommands),
 
@@ -131,5 +136,17 @@ export const ccf = {
   menus: {
     getOpenMenuInfo: () => ccfoliaRPC<any>("menus.getOpenMenuInfo")
   },
-  getOpenMenuInfo: () => ccfoliaRPC<any>("menus.getOpenMenuInfo")
+  getOpenMenuInfo: () => ccfoliaRPC<any>("menus.getOpenMenuInfo"),
+
+  // ccf.messages
+  messages: {
+    delete: (messageId: string) => ccfoliaRPC<void>("messages.delete", messageId),
+    edit: (messageId: string, newText: string) => ccfoliaRPC<void>("messages.edit", messageId, newText),
+    sendSystemMessage: (text: string, channel?: { channel: string; channelName: string }) => 
+      ccfoliaRPC<void>("messages.sendSystemMessage", text, channel),
+    sendMessageAsChar: (text: string, charName: string, iconUrl?: string, color?: string) =>
+      ccfoliaRPC<void>("messages.sendMessageAsChar", text, charName, iconUrl, color),
+    sendDiceAsChar: (notation: string, label: string, charName: string) =>
+      ccfoliaRPC<void>("messages.sendDiceAsChar", notation, label, charName)
+  }
 }

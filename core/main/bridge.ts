@@ -1,5 +1,6 @@
 import type { CcReq, CcRes } from "../../utils/types" // 경로 주의
 import { buildAPI } from "./api"
+import { startMessageTagging } from "./api/messages"
 import { stealReduxStore, stealWebpackRequire } from "./hijack"
 
 export function initCoreEngine() {
@@ -10,6 +11,11 @@ export function initCoreEngine() {
 
   window.ccfoliaAPI = buildAPI()
   installRpcBridge()
+
+  // 메시지 DOM 태깅 시작 (branch-world-battle-advice 포팅)
+  setTimeout(() => {
+    startMessageTagging()
+  }, 2000)
 
   console.log("%c[CCFOLIA-API] Core 엔진 가동 완료", "color: lime")
 }
