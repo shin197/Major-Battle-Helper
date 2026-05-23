@@ -86,7 +86,7 @@ export async function evalChatInputBoxMajorBattle(ev: KeyboardEvent) {
     }
     if (finalVal.startsWith("/battle")) {
       // 전투 초기화 처리
-      initBattle()
+      initBattle(finalVal)
       finalVal = ""
     }
     if (finalVal.startsWith("/cap")) {

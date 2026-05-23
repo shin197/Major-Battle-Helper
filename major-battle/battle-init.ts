@@ -84,17 +84,38 @@ export async function capStatus(mustCap: string[] = []) {
  * - 특정 Status(MP, DEF 등)를 대응하는 Param(초기마력 등) 값으로 설정
  * - Param이 없으면 0으로 설정
  * ----------------------------------------------------------------*/
-export async function initBattle() {
+export async function initBattle(commandLine: string = "") {
   try {
-    const characters = await ccf.getCharacters("status")
-    if (!characters || characters.length === 0) {
+    let content = commandLine.replace(/^\/battle\s*/, "").trim()
+    
+    // 대상 캐릭터 파싱: [캐릭터A] [캐릭터B]
+    const targetNames: string[] = []
+    content = content.replace(/\[(.*?)\]/g, (match, name) => {
+      targetNames.push(name.trim())
+      return ""
+    })
+
+    const allCharacters = await ccf.getCharacters("status")
+    if (!allCharacters || allCharacters.length === 0) {
       showToast("❗ 캐릭터를 찾을 수 없습니다.")
       return
     }
 
+    let charactersToInit = []
+    if (targetNames.length > 0) {
+      for (const name of targetNames) {
+        const char = allCharacters.find((c) => c.name === name)
+        if (char) charactersToInit.push(char)
+        else showToast(`❗ 캐릭터 '${name}'를 찾을 수 없습니다.`)
+      }
+      if (charactersToInit.length === 0) return
+    } else {
+      charactersToInit = allCharacters
+    }
+
     let updatedCount = 0
 
-    for (const char of characters) {
+    for (const char of charactersToInit) {
       const statusUpdates: Record<string, number> = {}
 
       for (const pair of INIT_PAIRS) {
@@ -124,7 +145,6 @@ export async function initBattle() {
         await ccf.patchCharacter(char.name, {
           status: statusUpdates
         })
-        //  callCcfolia("patchCharacter", )
         updatedCount++
       }
     }
@@ -231,16 +251,13 @@ export async function handleDmgCommand(
       dmg = Math.floor(dmg / 2)
     }
 
+    // 고정형 피해라면, 방어도 무시
+    if (dmgType.includes("고정")) {
+      dmg += armor * hitCount
+    }
+
     // 장갑을 횟수만큼 적용
     dmg -= armor * hitCount
-
-    // 충격형 피해라면, 방어도에 50% 적용
-    if (dmgType.includes("충격")) {
-      dmg -= armor * hitCount
-    }
-    // if (dmgType.includes("충격")) {
-    //   dmg = Math.floor(dmg / 2)
-    // }
 
     // 방어도를 피해만큼 차감
     def -= Math.max(0, dmg)
@@ -250,7 +267,19 @@ export async function handleDmgCommand(
       await ccf.patchCharacter(target.name, {
         status: { DEF: Math.floor(def) }
       })
-      // showToast(`🛡️ ${target.name}의 방어도가 공격을 막아냈습니다! (남은 DEF: ${Math.floor(def)})`)
+      let message = `⚔️ ${target.name}의 방어도가 ${dmgAmount}`
+      let typeMessage = " 피해를"
+      let countMessage = " 막았습니다."
+      if (dmgType !== "일반") {
+        typeMessage = `의 ${dmgType}형 피해를`
+      }
+      if (hitCount > 1) {
+        countMessage = ` 총 ${hitCount}회에 걸쳐서 막아냈습니다.`
+      }
+      message += typeMessage + countMessage
+      showToast(message)
+      await ccf.messages.sendSystemMessage(message)
+
       return
     }
 
@@ -318,6 +347,7 @@ export async function handleDmgCommand(
         message += ` (${kills}기 처치)`
       }
       showToast(message)
+      await ccf.messages.sendSystemMessage(message)
     } catch (e) {
       // console.error("[BattleHelper] patchCharacter failed during /dmg:", e)
     }

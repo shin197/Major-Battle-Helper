@@ -124,7 +124,11 @@ function addRipple(btn: HTMLElement, color: string) {
   })
 }
 
-function showEditDialog(msgId: string, currentText: string, onConfirm: (newText: string) => void) {
+function showEditDialog(
+  msgId: string,
+  currentText: string,
+  onConfirm: (newText: string) => void
+) {
   const existing = document.getElementById("mb-msg-edit-dialog")
   if (existing) existing.remove()
 
@@ -196,7 +200,7 @@ function showEditDialog(msgId: string, currentText: string, onConfirm: (newText:
 
   btnRow.appendChild(confirmBtn)
   addRipple(confirmBtn, "rgba(33, 150, 243, 0.3)")
-  
+
   dialog.appendChild(content)
   dialog.appendChild(btnRow)
   overlay.appendChild(backdrop)
@@ -204,7 +208,7 @@ function showEditDialog(msgId: string, currentText: string, onConfirm: (newText:
   document.body.appendChild(overlay)
 
   backdrop.addEventListener("click", () => closeDialog(overlay))
-  
+
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       overlay.classList.add("mb-dialog-open")
@@ -279,18 +283,14 @@ function injectActions(listItem: HTMLElement) {
 
   // 시스템 메시지: 본인이 보낸 거면 [편집][삭제]
   if (isOwn && msgType === "system") {
-    const editBtn = createActionBtn(
-      ICON_EDIT,
-      "수정",
-      "mb-msg-action-edit"
-    )
+    const editBtn = createActionBtn(ICON_EDIT, "수정", "mb-msg-action-edit")
     editBtn.onclick = (e) => {
       e.stopPropagation()
       const textEl = listItem.querySelector(".MuiListItemText-secondary")
       const currentText = textEl ? textEl.textContent || "" : ""
       showEditDialog(msgId, currentText, (newText) => {
-        ccf.messages.edit(msgId, newText).then((success) => {
-          if (success && textEl) {
+        ccf.messages.edit(msgId, newText).then(() => {
+          if (textEl) {
             textEl.textContent = newText
           }
         })
