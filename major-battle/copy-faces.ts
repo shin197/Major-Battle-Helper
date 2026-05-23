@@ -75,10 +75,15 @@ async function injectMenuItem(paper: HTMLElement) {
   li.dataset.helper = "copy-expression"
   li.textContent = LABEL
 
-  // 💡 메뉴 위치를 잡기 위해 "ID 복사" DOM을 찾습니다. (기능적 의존 X, 오직 위치 잡기용)
-  const idCopyItem = Array.from(ul.children).find((n) =>
-    n.textContent?.trim().startsWith("ID 복사")
-  ) as HTMLElement | undefined
+  // 💡 3. 서브 드롭다운에 잘못 주입되는 것을 막기 위해, 루트 캐릭터 메뉴에만 존재하는 항목 확인
+  // "ID 복사" (한국어), "IDをコピー" (일본어), "Copy ID" (영어)
+  const idCopyItem = Array.from(ul.children).find((n) => {
+    const text = n.textContent?.trim() || ""
+    return text.startsWith("ID 복사") || text.startsWith("IDをコピー") || text.startsWith("Copy ID")
+  }) as HTMLElement | undefined
+
+  // 만약 루트 메뉴의 특징적인 항목이 없다면 서브 드롭다운으로 간주하고 주입 중단
+  if (!idCopyItem) return
 
   li.addEventListener("click", async (e) => {
     e.stopPropagation()
