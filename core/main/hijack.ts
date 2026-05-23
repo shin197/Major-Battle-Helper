@@ -169,7 +169,7 @@ function pickFirestoreExports(mod: any): null | {
           setDoc = val
           break
         }
-      } catch (e) {}
+      } catch (e) { }
     }
   }
 
@@ -197,7 +197,7 @@ function resolveDb(req: any) {
       const mod = req(cachedDbId)
       const db = pickDb(mod)
       if (db) return db
-    } catch {}
+    } catch { }
   }
 
   const dbId = findModuleIdByExportShape(req, (mod) => !!pickDb(mod))
@@ -232,7 +232,7 @@ function resolveSelectors(req: any) {
       window.__CCFOLIA_MOD_CACHE__.selId = 88464
       return mod
     }
-  } catch {}
+  } catch { }
 
   // 2. 동적 탐색 (함수 이름 추정)
   const selId = findModuleIdByExportShape(req, (mod) => !!pickSelectors(mod))
@@ -262,7 +262,7 @@ function resolveRoomItemActions(req: any) {
     try {
       const mod = req(cachedId)
       if (pickRoomItemActions(mod)) return mod
-    } catch {}
+    } catch { }
   }
 
   // 1. 알려진 ID(15290) 먼저 시도 (빠른 로딩)
@@ -272,7 +272,7 @@ function resolveRoomItemActions(req: any) {
       window.__CCFOLIA_MOD_CACHE__.riaId = 15290
       return mod
     }
-  } catch {}
+  } catch { }
 
   // 2. 동적 탐색 (업데이트 대비 Fallback)
   const tcId = findModuleIdByExportShape(
@@ -316,17 +316,17 @@ function resolveRoomActions(req: any) {
     try {
       const mod = req(cachedId)
       if (pickRoomActions(mod)) return mod
-    } catch {}
+    } catch { }
   }
 
   // 1. 알려진 ID(69019) 먼저 시도
   try {
-    const mod = req(69019)
+    const mod = req(23728)
     if (pickRoomActions(mod)) {
-      window.__CCFOLIA_MOD_CACHE__.raId = 69019
+      window.__CCFOLIA_MOD_CACHE__.raId = 23728
       return mod
     }
-  } catch {}
+  } catch { }
 
   // 2. 동적 탐색 (업데이트 대비 Fallback)
   // 원본 함수 내부에 있는 고유한 문자열 '"update-marker"'를 추적 단서로 사용합니다.

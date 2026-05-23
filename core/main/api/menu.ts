@@ -35,16 +35,24 @@ export const menus = {
         type: "marker",
         flagKey: "openRoomMarkerMenu",
         idKey: "openRoomMarkerMenuId"
+      },
+      {
+        type: "objects",
+        flagKey: "openRoomSelectedObjectsMenu",
+        idKey: "selectedObjects"
       }
     ]
 
     for (const menu of menuTypes) {
       if (state[menu.flagKey]) {
-        const idFallback = menu.idKey
-        const targetId = state[menu.idKey] || state[idFallback]
-
-        if (targetId) {
-          return { type: menu.type, id: targetId }
+        if (menu.idKey) {
+          const idFallback = menu.idKey
+          const targetId = state[menu.idKey] || state[idFallback]
+          if (targetId) {
+            return { type: menu.type, id: targetId }
+          }
+        } else {
+          return { type: menu.type, id: null }
         }
       }
     }
