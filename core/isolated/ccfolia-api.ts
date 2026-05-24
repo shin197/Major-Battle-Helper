@@ -127,6 +127,7 @@ export const ccf = {
   getAllTokens: () => ccfoliaRPC<any[]>("tokens.getAll"),
   setSelectedObjects: (objects: Array<{ selectType: string; id: string }>) => 
     ccfoliaRPC<void>("tokens.setSelectedObjects", objects),
+  deleteSelectedObjectsWithUndo: () => ccfoliaRPC<boolean>("tokens.deleteSelectedObjectsWithUndo"),
   patchToken: (tokenId: string, updates: Record<string, any>) =>
     ccfoliaRPC<void>("tokens.patch", tokenId, updates),
   patchBulkTokens: (

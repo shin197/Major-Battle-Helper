@@ -26,6 +26,7 @@ export const buildAPI = () => {
     patchToken: tokens.patch,
     patchBulkTokens: tokens.patchBulk,
     setSelectedObjects: tokens.setSelectedObjects,
+    deleteSelectedObjectsWithUndo: tokens.deleteSelectedObjectsWithUndo,
     messages,
     getAllMessages: messages.getAll,
     modifyRollResult: messages.modifyRollResult,

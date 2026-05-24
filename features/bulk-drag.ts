@@ -328,13 +328,13 @@ const moveGroupDrag = (x: number, y: number) => {
 }
 
 const finishGroupDrag = async () => {
-  console.log("[API Drag] 🛑 마우스 뗌 감지, API 처리 시작")
+  // console.log("[API Drag] 🛑 마우스 뗌 감지, API 처리 시작")
   groupDragging = false
   clearGhosts()
   document.body.removeAttribute(DRAGGING_ATTR)
 
   if (!currentLeaderId || !leaderStartDataPromise) {
-    console.warn("[API Drag] 리더 정보가 누락되어 중단합니다.")
+    // console.warn("[API Drag] 리더 정보가 누락되어 중단합니다.")
     return
   }
 
@@ -492,6 +492,9 @@ const onPointerDown = (e: PointerEvent) => {
   // 3. 기본 좌클릭 로직: 그룹 드래그 시작 또는 선택 초기화
   // ==================================================
   if (e.button === 0) {
+    // 💡 컨텍스트 메뉴나 UI 요소(버튼, 입력창 등)를 클릭한 경우 선택 해제를 방지합니다.
+    if (!isEventInsideSelectionArea(e)) return
+
     const root = getPanelRoot(e.target)
     if (root && selected.has(root) && selected.size > 1) {
       const leaderId =
@@ -567,8 +570,8 @@ const onKeyDown = (e: KeyboardEvent) => {
     return
   }
 
-  // 💡 2. Delete 또는 Backspace 키: 선택된 토큰 다중 삭제
-  if (e.key === "Delete" || e.key === "Backspace") {
+  // 💡 2. Delete 키: 선택된 토큰 다중 삭제
+  if (e.key === "Delete") {
     // [중요] 사용자가 텍스트 입력창(채팅창, 캐릭터 시트 등)에 타이핑 중인지 확인
     const activeEl = document.activeElement as HTMLElement
     if (activeEl) {
@@ -587,6 +590,19 @@ const onKeyDown = (e: KeyboardEvent) => {
 
       // 비동기 삭제 처리 IIFE
       ; (async () => {
+        if (selected.size === 0) return
+
+        // 1. 코코포리아 내부 로직(Undo 포함)을 사용하여 삭제 시도
+        const nativeDeleteSuccess = await ccf.deleteSelectedObjectsWithUndo()
+
+        if (nativeDeleteSuccess) {
+          showToast(`❎ ${selected.size}개 토큰을 삭제했습니다.`)
+          clearSelection(true)
+          return
+        }
+
+        // 2. 만약 내부 로직 호출에 실패했다면 폴백(Fallback)으로 기존 개별 삭제 로직 사용
+
         const elementsToDelete = Array.from(selected)
         let deletedCount = 0
 
@@ -594,27 +610,20 @@ const onKeyDown = (e: KeyboardEvent) => {
           const domId = findItemIdFromDom(el)
           if (!domId) continue
 
-          // 토큰의 정확한 ID와 타입을 알기 위해 데이터를 가져옵니다.
           const tokenData = await fetchTokenData(domId)
           if (!tokenData) continue
-
-          console.log("TokenData", { targetId: domId, tokenData })
 
           const targetId = domId || tokenData.id
           const targetType = tokenData._type
 
           try {
-            if (targetType === "roomCharacter") {
-              continue
-            }
+            if (targetType === "roomCharacter") continue
 
             if (ccf.tokens.delete) {
               await ccf.tokens.delete(targetId)
               deletedCount++
             } else {
-              console.warn(
-                "[API Drag] ccf.tokens.delete 메서드가 구현되지 않았습니다."
-              )
+              console.warn("[API Drag] ccf.tokens.delete 메서드가 구현되지 않았습니다.")
             }
           } catch (err) {
             console.error(`[API Drag] 토큰(${targetId}) 삭제 실패:`, err)
@@ -622,9 +631,10 @@ const onKeyDown = (e: KeyboardEvent) => {
         }
 
         if (deletedCount > 0) {
-          showToast(`❎ ${deletedCount}개 토큰을 삭제했습니다.`)
+          showToast(`❎ ${deletedCount}개 토큰을 삭제했습니다. (폴백 로직)`)
           clearSelection(true)
         }
+
       })()
   }
 

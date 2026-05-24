@@ -21,6 +21,21 @@ export const tokens = {
     )
   },
 
+  deleteSelectedObjectsWithUndo: async () => {
+    const { store, roomActions } = getServices()
+    if (!roomActions || typeof roomActions.deleteObjectsWithUndo !== "function") {
+      console.warn("[BattleHelper] deleteObjectsWithUndo를 찾을 수 없습니다.")
+      return false
+    }
+
+    const state = store.getState()
+    const selectedObjects = state.app?.state?.selectedObjects || []
+    if (selectedObjects.length === 0) return false
+
+    await store.dispatch(roomActions.deleteObjectsWithUndo(selectedObjects))
+    return true
+  },
+
   getAll: () => {
     const { store, roomId } = getServices()
     const state = store.getState()
