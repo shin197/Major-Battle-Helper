@@ -120,9 +120,13 @@ export const ccf = {
     create: (type: string, payload: any) =>
       ccfoliaRPC<string>("tokens.create", type, payload),
     delete: (tokenId: string) => ccfoliaRPC<void>("tokens.delete", tokenId),
-    toggleInspector: () => ccfoliaRPC<void>("tokens.toggleInspector")
+    toggleInspector: () => ccfoliaRPC<void>("tokens.toggleInspector"),
+    setSelectedObjects: (objects: Array<{ selectType: string; id: string }>) => 
+      ccfoliaRPC<void>("tokens.setSelectedObjects", objects)
   },
   getAllTokens: () => ccfoliaRPC<any[]>("tokens.getAll"),
+  setSelectedObjects: (objects: Array<{ selectType: string; id: string }>) => 
+    ccfoliaRPC<void>("tokens.setSelectedObjects", objects),
   patchToken: (tokenId: string, updates: Record<string, any>) =>
     ccfoliaRPC<void>("tokens.patch", tokenId, updates),
   patchBulkTokens: (

@@ -113,6 +113,39 @@ const hideSelectRect = () => {
   if (selectRectEl) selectRectEl.style.display = "none"
 }
 
+const syncReduxSelection = async () => {
+  try {
+    const objects: Array<{ selectType: string; id: string }> = []
+
+    if (selected.size > 0) {
+      const allTokens = await ccf.tokens.getAll()
+      for (const el of selected) {
+        const domId = findItemIdFromDom(el)
+        if (!domId) continue
+        const tokenData = allTokens.find((t: any) => {
+          const tid = t.id || t._id
+          if (!tid) return false
+          return domId.includes(tid) || tid.includes(domId)
+        })
+        if (tokenData) {
+          const selectType = tokenData._type === "roomItem" ? "item" :
+            tokenData._type === "roomCharacter" ? "character" :
+              tokenData._type === "roomMarker" ? "marker" :
+                tokenData._type === "roomDeck" ? "deck" :
+                  tokenData._type === "roomDice" ? "diceItem" : ""
+          if (selectType) {
+            objects.push({ selectType, id: tokenData.id || tokenData._id })
+          }
+        }
+      }
+    }
+
+    await ccf.setSelectedObjects(objects)
+  } catch (err) {
+    console.warn("[BattleHelper] Redux 선택 동기화 실패:", err)
+  }
+}
+
 const updateSelectionByRect = (rect: DOMRect, mode: SelectMode = "replace") => {
   getPanels().forEach((p) => {
     const hit = intersects(rect, p.getBoundingClientRect())
@@ -133,12 +166,13 @@ const updateSelectionByRect = (rect: DOMRect, mode: SelectMode = "replace") => {
   })
 }
 
-const clearSelection = () => {
+const clearSelection = (sync = true) => {
   selected.forEach((el) => {
     el.setAttribute(SELECTED_ATTR, "false")
     el.removeAttribute("data-bulk-locked")
   })
   selected.clear()
+  if (sync) void syncReduxSelection()
 }
 
 const startRectSelection = (
@@ -167,6 +201,7 @@ const endRectSelection = () => {
   selecting = false
   hideSelectRect()
   selectMode = "replace"
+  void syncReduxSelection()
 }
 
 /** =========================
@@ -304,83 +339,87 @@ const finishGroupDrag = async () => {
   }
 
   try {
-    const leaderStartData = await leaderStartDataPromise
-    if (!leaderStartData) {
-      console.warn(
-        `[API Drag] 리더(${currentLeaderId})의 초기 데이터를 가져오지 못했습니다.`
-      )
-      return
-    }
+    // const leaderStartData = await leaderStartDataPromise
+    // if (!leaderStartData) {
+    //   console.warn(
+    //     `[API Drag] 리더(${currentLeaderId})의 초기 데이터를 가져오지 못했습니다.`
+    //   )
+    //   return
+    // }
 
-    let leaderEndData = await fetchTokenData(currentLeaderId)
-    let dx = (leaderEndData?.x || 0) - leaderStartData.x
-    let dy = (leaderEndData?.y || 0) - leaderStartData.y
+    // let leaderEndData = await fetchTokenData(currentLeaderId)
+    // let dx = (leaderEndData?.x || 0) - leaderStartData.x
+    // let dy = (leaderEndData?.y || 0) - leaderStartData.y
 
-    let attempts = 0
-    while (dx === 0 && dy === 0 && attempts < 20) {
-      await sleep(50)
-      leaderEndData = await fetchTokenData(currentLeaderId)
-      if (!leaderEndData) break
-      dx = leaderEndData.x - leaderStartData.x
-      dy = leaderEndData.y - leaderStartData.y
-      attempts++
-    }
+    // let attempts = 0
+    // while (dx === 0 && dy === 0 && attempts < 20) {
+    //   await sleep(50)
+    //   leaderEndData = await fetchTokenData(currentLeaderId)
+    //   if (!leaderEndData) break
+    //   dx = leaderEndData.x - leaderStartData.x
+    //   dy = leaderEndData.y - leaderStartData.y
+    //   attempts++
+    // }
 
-    if (dx === 0 && dy === 0) {
-      console.log("[API Drag] 토큰이 이동하지 않아 단체 이동을 취소합니다.")
-      return
-    }
+    // if (dx === 0 && dy === 0) {
+    //   console.log("[API Drag] 토큰이 이동하지 않아 단체 이동을 취소합니다.")
+    //   return
+    // }
 
-    const isPixelUnit = (type: string) => type === "roomCharacter"
-    const leaderType = leaderStartData._type
+    // const isPixelUnit = (type: string) => type === "roomCharacter"
+    // const leaderType = leaderStartData._type
 
-    let pixelDx = 0,
-      pixelDy = 0
-    if (isPixelUnit(leaderType)) {
-      pixelDx = dx
-      pixelDy = dy
-    } else {
-      pixelDx = dx * GRID_SIZE
-      pixelDy = dy * GRID_SIZE
-    }
+    // let pixelDx = 0,
+    //   pixelDy = 0
+    // if (isPixelUnit(leaderType)) {
+    //   pixelDx = dx
+    //   pixelDy = dy
+    // } else {
+    //   pixelDx = dx * GRID_SIZE
+    //   pixelDy = dy * GRID_SIZE
+    // }
 
-    console.log(
-      `[API Drag] 📍 리더 실제 이동량 - Grid 변위: ${dx},${dy} / Pixel 변위: ${pixelDx},${pixelDy}`
-    )
+    // console.log(
+    //   `[API Drag] 📍 리더 실제 이동량 - Grid 변위: ${dx},${dy} / Pixel 변위: ${pixelDx},${pixelDy}`
+    // )
 
-    const bulkUpdates: Array<{
-      id: string
-      _type: string
-      data: Record<string, any>
-    }> = []
+    // const bulkUpdates: Array<{
+    //   id: string
+    //   _type: string
+    //   data: Record<string, any>
+    // }> = []
 
-    for (const fid of activeFollowerIds) {
-      const fData = await fetchTokenData(fid)
-      if (!fData) continue
+    // for (const fid of activeFollowerIds) {
+    //   const fData = await fetchTokenData(fid)
+    //   if (!fData) continue
 
-      const fType = fData._type
-      let applyDx = pixelDx
-      let applyDy = pixelDy
+    //   const fType = fData._type
+    //   let applyDx = pixelDx
+    //   let applyDy = pixelDy
 
-      if (!isPixelUnit(fType)) {
-        applyDx = Math.round(pixelDx / GRID_SIZE)
-        applyDy = Math.round(pixelDy / GRID_SIZE)
-      }
+    //   if (!isPixelUnit(fType)) {
+    //     applyDx = Math.round(pixelDx / GRID_SIZE)
+    //     applyDy = Math.round(pixelDy / GRID_SIZE)
+    //   }
 
-      const targetId = fData.id || fData._id
-      bulkUpdates.push({
-        id: targetId,
-        _type: fType,
-        data: { x: fData.x + applyDx, y: fData.y + applyDy }
-      })
-    }
+    //   const targetId = fData.id || fData._id
+    //   bulkUpdates.push({
+    //     id: targetId,
+    //     _type: fType,
+    //     data: { x: fData.x + applyDx, y: fData.y + applyDy }
+    //   })
+    // }
 
+    // [주석 처리] Redux 동기화(Strategy 1)로 인해 코코포리아 내부 로직이 이미 토큰들을 옮기게 되므로,
+    // 커스텀 API를 통한 추가 이동 로직을 주석 처리하여 2배로 이동하는 부작용을 방지합니다.
+    /*
     if (bulkUpdates.length > 0) {
       await ccf.tokens.patchBulk(bulkUpdates)
       console.log(
         `[API Drag] ✅ ${bulkUpdates.length}개 토큰 단체 이동(Batch) 완료!`
       )
     }
+    */
   } catch (error) {
     console.error("[API Drag] 단체 드래그 API 적용 중 오류:", error)
   } finally {
@@ -421,6 +460,7 @@ const onPointerDown = (e: PointerEvent) => {
           else selectPanel(root)
         }
         suppressNextClick = true
+        void syncReduxSelection()
       }
       return
     }
@@ -465,7 +505,7 @@ const onPointerDown = (e: PointerEvent) => {
         )
       }
     } else if (!selecting) {
-      if (!root) clearSelection()
+      if (!root) clearSelection(true)
     }
   }
 }
@@ -523,7 +563,7 @@ const onKeyDown = (e: KeyboardEvent) => {
       groupDragging = false
       dragLeader = null
     }
-    clearSelection()
+    clearSelection(true)
     return
   }
 
@@ -545,47 +585,47 @@ const onKeyDown = (e: KeyboardEvent) => {
     // 기본 '뒤로가기' 동작 등 방지
     e.preventDefault()
 
-    // 비동기 삭제 처리 IIFE
-    ;(async () => {
-      const elementsToDelete = Array.from(selected)
-      let deletedCount = 0
+      // 비동기 삭제 처리 IIFE
+      ; (async () => {
+        const elementsToDelete = Array.from(selected)
+        let deletedCount = 0
 
-      for (const el of elementsToDelete) {
-        const domId = findItemIdFromDom(el)
-        if (!domId) continue
+        for (const el of elementsToDelete) {
+          const domId = findItemIdFromDom(el)
+          if (!domId) continue
 
-        // 토큰의 정확한 ID와 타입을 알기 위해 데이터를 가져옵니다.
-        const tokenData = await fetchTokenData(domId)
-        if (!tokenData) continue
+          // 토큰의 정확한 ID와 타입을 알기 위해 데이터를 가져옵니다.
+          const tokenData = await fetchTokenData(domId)
+          if (!tokenData) continue
 
-        console.log("TokenData", { targetId: domId, tokenData })
+          console.log("TokenData", { targetId: domId, tokenData })
 
-        const targetId = domId || tokenData.id
-        const targetType = tokenData._type
+          const targetId = domId || tokenData.id
+          const targetType = tokenData._type
 
-        try {
-          if (targetType === "roomCharacter") {
-            continue
+          try {
+            if (targetType === "roomCharacter") {
+              continue
+            }
+
+            if (ccf.tokens.delete) {
+              await ccf.tokens.delete(targetId)
+              deletedCount++
+            } else {
+              console.warn(
+                "[API Drag] ccf.tokens.delete 메서드가 구현되지 않았습니다."
+              )
+            }
+          } catch (err) {
+            console.error(`[API Drag] 토큰(${targetId}) 삭제 실패:`, err)
           }
-
-          if (ccf.tokens.delete) {
-            await ccf.tokens.delete(targetId)
-            deletedCount++
-          } else {
-            console.warn(
-              "[API Drag] ccf.tokens.delete 메서드가 구현되지 않았습니다."
-            )
-          }
-        } catch (err) {
-          console.error(`[API Drag] 토큰(${targetId}) 삭제 실패:`, err)
         }
-      }
 
-      if (deletedCount > 0) {
-        showToast(`❎ ${deletedCount}개 토큰을 삭제했습니다.`)
-        clearSelection()
-      }
-    })()
+        if (deletedCount > 0) {
+          showToast(`❎ ${deletedCount}개 토큰을 삭제했습니다.`)
+          clearSelection(true)
+        }
+      })()
   }
 
   // 💡 3. Ctrl + C : 다중 토큰 복사
@@ -601,66 +641,66 @@ const onKeyDown = (e: KeyboardEvent) => {
 
     if (tokensToCopy.length === 0) return
     e.preventDefault()
-    ;(async () => {
-      const tokenDatas = []
-      let minX = Infinity,
-        maxX = -Infinity
-      let minY = Infinity,
-        maxY = -Infinity
+      ; (async () => {
+        const tokenDatas = []
+        let minX = Infinity,
+          maxX = -Infinity
+        let minY = Infinity,
+          maxY = -Infinity
 
-      // 1. 모든 토큰의 데이터를 가져오면서 Bounding Box(최소/최대 좌표)를 구합니다.
-      for (const el of tokensToCopy) {
-        const domId = findItemIdFromDom(el)
-        if (!domId) continue
+        // 1. 모든 토큰의 데이터를 가져오면서 Bounding Box(최소/최대 좌표)를 구합니다.
+        for (const el of tokensToCopy) {
+          const domId = findItemIdFromDom(el)
+          if (!domId) continue
 
-        const tokenData = await fetchTokenData(domId)
-        if (!tokenData) continue
-        if (tokenData._type === "roomCharacter") {
-          continue
+          const tokenData = await fetchTokenData(domId)
+          if (!tokenData) continue
+          if (tokenData._type === "roomCharacter") {
+            continue
+          }
+
+          tokenDatas.push(tokenData)
+
+          // 최소/최대 좌표 갱신 (그룹의 전체 크기를 파악)
+          if (tokenData.x < minX) minX = tokenData.x
+          if (tokenData.x > maxX) maxX = tokenData.x
+          if (tokenData.y < minY) minY = tokenData.y
+          if (tokenData.y > maxY) maxY = tokenData.y
         }
 
-        tokenDatas.push(tokenData)
+        if (tokenDatas.length === 0) return
 
-        // 최소/최대 좌표 갱신 (그룹의 전체 크기를 파악)
-        if (tokenData.x < minX) minX = tokenData.x
-        if (tokenData.x > maxX) maxX = tokenData.x
-        if (tokenData.y < minY) minY = tokenData.y
-        if (tokenData.y > maxY) maxY = tokenData.y
-      }
+        // 🌟 2. UX 핵심: 그룹의 '정중앙' 좌표를 계산하여 영점으로 삼습니다.
+        const originX = Math.round((minX + maxX) / 2)
+        const originY = Math.round((minY + maxY) / 2)
 
-      if (tokenDatas.length === 0) return
+        const bundleItems = []
 
-      // 🌟 2. UX 핵심: 그룹의 '정중앙' 좌표를 계산하여 영점으로 삼습니다.
-      const originX = Math.round((minX + maxX) / 2)
-      const originY = Math.round((minY + maxY) / 2)
+        // 3. 중심점 대비 상대 좌표(dx, dy) 계산 및 데이터 정제
+        for (const tokenData of tokenDatas) {
+          const { id, _id, owner, createdAt, updatedAt, ...cleanData } = tokenData
 
-      const bundleItems = []
-
-      // 3. 중심점 대비 상대 좌표(dx, dy) 계산 및 데이터 정제
-      for (const tokenData of tokenDatas) {
-        const { id, _id, owner, createdAt, updatedAt, ...cleanData } = tokenData
-
-        if (
-          tokenData._type === "roomItem" ||
-          tokenData._type === "roomMarker"
-        ) {
-          bundleItems.push({
-            kind: tokenData._type,
-            data: cleanData,
-            dx: tokenData.x - originX, // 중심점으로부터 얼마나 떨어져 있는가?
-            dy: tokenData.y - originY
-          })
+          if (
+            tokenData._type === "roomItem" ||
+            tokenData._type === "roomMarker"
+          ) {
+            bundleItems.push({
+              kind: tokenData._type,
+              data: cleanData,
+              dx: tokenData.x - originX, // 중심점으로부터 얼마나 떨어져 있는가?
+              dy: tokenData.y - originY
+            })
+          }
         }
-      }
 
-      const clipboardText = JSON.stringify({
-        kind: "ccfTokenBundle",
-        items: bundleItems
-      })
+        const clipboardText = JSON.stringify({
+          kind: "ccfTokenBundle",
+          items: bundleItems
+        })
 
-      await navigator.clipboard.writeText(clipboardText)
-      showToast(`✅ ${bundleItems.length}개 토큰을 복사했습니다.`) // 📋
-    })()
+        await navigator.clipboard.writeText(clipboardText)
+        showToast(`✅ ${bundleItems.length}개 토큰을 복사했습니다.`) // 📋
+      })()
   }
 }
 

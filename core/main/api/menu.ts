@@ -1,7 +1,7 @@
 import { getServices } from "../hijack"
 
 export const menus = {
-  getOpenMenuInfo: (): { type: string; id: string } | null => {
+  getOpenMenuInfo: (): { type: string; id: string | Array<{selectType: string, id: string}> | null } | null => {
     // console.log("%c[CCFOLIA-API] getOpenMenuInfo 호출됨", "color: #2196f3")
     const { store } = getServices()
     const state = store.getState().app?.state
@@ -57,6 +57,5 @@ export const menus = {
       }
     }
 
-    return null // 열려있는 메뉴가 없거나 알 수 없는 메뉴임
   }
 }

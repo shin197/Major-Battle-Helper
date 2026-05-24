@@ -45,6 +45,7 @@ declare global {
       selId?: number
       riaId?: number
       raId?: number
+      appActionsId?: number
     }
   }
 }

@@ -7,6 +7,20 @@ import { getServices } from "../hijack"
 let lastHoveredTokenId: string | null = null
 
 export const tokens = {
+  setSelectedObjects: (objects: Array<{ selectType: string; id: string }>) => {
+    const { store, appActions } = getServices()
+    if (!appActions || typeof appActions.appStateMutate !== "function") {
+      console.warn("[BattleHelper] appStateMutate를 찾을 수 없어 Redux 동기화를 건너뜁니다.")
+      return
+    }
+
+    store.dispatch(
+      appActions.appStateMutate((state: any) => {
+        state.selectedObjects = objects
+      })
+    )
+  },
+
   getAll: () => {
     const { store, roomId } = getServices()
     const state = store.getState()

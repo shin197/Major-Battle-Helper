@@ -54,6 +54,7 @@ export function getServices() {
   const selectors = resolveSelectors(req)
   const roomItemActions = resolveRoomItemActions(req)
   const roomActions = resolveRoomActions(req) // 👈 마커/룸 액션 탈취
+  const appActions = resolveAppActions(req) // 👈 앱(App) 액션 탈취
 
   const state = store.getState()
   const roomId = state.app?.state?.roomId
@@ -70,6 +71,7 @@ export function getServices() {
     selectors,
     roomItemActions,
     roomActions,
+    appActions,
     roomId,
     rc
   }
@@ -352,5 +354,55 @@ function pickRoomActions(mod: any) {
       if (fnStr.includes('"update-marker"')) return mod
     }
   }
+  return null
+}
+
+function resolveAppActions(req: any) {
+  window.__CCFOLIA_MOD_CACHE__ ??= {}
+
+  // 0. 캐시 확인
+  const cachedId = window.__CCFOLIA_MOD_CACHE__.appActionsId
+  if (cachedId != null) {
+    try {
+      const mod = req(cachedId)
+      if (pickAppActions(mod)) return mod
+    } catch { }
+  }
+
+  // 1. 알려진 ID(99093) 먼저 시도 (사용자 제공)
+  try {
+    const mod = req(99093)
+    if (pickAppActions(mod)) {
+      window.__CCFOLIA_MOD_CACHE__.appActionsId = 99093
+      return mod
+    }
+  } catch { }
+
+  // 2. 동적 탐색 (Fallback)
+  const appActionsId = findModuleIdByExportShape(req, pickAppActions)
+  if (appActionsId != null) {
+    window.__CCFOLIA_MOD_CACHE__.appActionsId = appActionsId
+    return req(appActionsId)
+  }
+
+  return null
+}
+
+function pickAppActions(mod: any) {
+  if (!mod || typeof mod !== "object") return null
+
+  if (typeof mod.appStateMutate === "function") return mod
+
+  for (const key of Object.keys(mod)) {
+    const val = mod[key]
+    if (typeof val === "function") {
+      const fnStr = val.toString()
+      // appStateMutate 관련 문자열 특징이 있다면 식별 (일단 export 키워드에 appStateMutate가 있을 확률이 높음)
+      if (fnStr.includes("selectedObjects") && fnStr.includes("state")) {
+         // rough guess if minified
+      }
+    }
+  }
+  // If minified and we can't easily find it, rely on the exact ID 99093
   return null
 }
