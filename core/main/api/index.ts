@@ -4,6 +4,7 @@ import { devtools } from "./devtools"
 import { menus } from "./menu"
 import { messages } from "./messages"
 import { tokens } from "./tokens"
+import { decks } from "./decks"
 
 export const buildAPI = () => {
   return {
@@ -36,6 +37,7 @@ export const buildAPI = () => {
     sendDiceAsChar: messages.sendDiceAsChar,
     menus,
     getOpenMenuInfo: menus.getOpenMenuInfo,
+    decks,
     devtools
   }
 }

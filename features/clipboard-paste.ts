@@ -51,8 +51,13 @@ export function initCustomClipboard() {
               // 주의: roomCharacter는 파라미터 구조가 복잡할 수 있으므로,
               // 우선 roomItem, roomMarker 등 지원하는 타입만 생성되도록 합니다.
               if (item.kind === "roomItem" || item.kind === "roomMarker") {
-                // TODO: deck 만들기
                 await ccf.tokens.create(item.kind as any, newPayload)
+                successCount++
+              } else if (item.kind === "roomDeck") {
+                // 덱 내부의 카드 데이터를 ccf.decks.create 시그니처에 맞게 배열로 추출
+                const deckItemsArray = newPayload.items ? Object.values(newPayload.items) : []
+                // items 속성은 create 함수 내부에서 재구성되므로 페이로드에서 제거하거나 그대로 둬도 무방함
+                await ccf.decks.create(newPayload, deckItemsArray)
                 successCount++
               }
             } catch (err) {

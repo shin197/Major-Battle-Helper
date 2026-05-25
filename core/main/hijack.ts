@@ -55,6 +55,7 @@ export function getServices() {
   const roomItemActions = resolveRoomItemActions(req)
   const roomActions = resolveRoomActions(req) // 👈 마커/룸 액션 탈취
   const appActions = resolveAppActions(req) // 👈 앱(App) 액션 탈취
+  const deckActions = resolveDeckActions(req) // 👈 덱(Deck) 액션 탈취
 
   const state = store.getState()
   const roomId = state.app?.state?.roomId
@@ -72,6 +73,7 @@ export function getServices() {
     roomItemActions,
     roomActions,
     appActions,
+    deckActions,
     roomId,
     rc
   }
@@ -135,10 +137,11 @@ function pickFirestoreExports(mod: any): null | {
   collection: Function
   deleteDoc: Function
   writeBatch: Function
+  addDoc: Function
 } {
   if (!mod || typeof mod !== "object") return null
 
-  let setDoc, doc, collection, deleteDoc, writeBatch
+  let setDoc, doc, collection, deleteDoc, writeBatch, addDoc
 
   // 1. 객체의 모든 속성을 순회하며 함수형태인 것들만 검사
   for (const key of Object.keys(mod)) {
@@ -156,6 +159,7 @@ function pickFirestoreExports(mod: any): null | {
       } else if (
         (fnStr.includes('"doc"') || fnName === "doc") &&
         !fnStr.includes('"setDoc"') &&
+        !fnStr.includes('"addDoc"') &&
         !fnStr.includes('"deleteDoc"')
       ) {
         doc = val
@@ -165,11 +169,12 @@ function pickFirestoreExports(mod: any): null | {
 
   for (const key of Object.keys(mod)) {
     const val = mod[key]
-    if (typeof val === "function" && val !== collection && val !== doc) {
+    if (typeof val === "function" && val !== collection && val !== doc && val !== deleteDoc && val !== writeBatch) {
       try {
         if (val.toString().includes('merge')) {
           setDoc = val
-          break
+        } else if (val.toString().includes('"addDoc"') || val.name === "addDoc") {
+          addDoc = val
         }
       } catch (e) { }
     }
@@ -181,10 +186,11 @@ function pickFirestoreExports(mod: any): null | {
   collection = collection ?? mod.hJ ?? mod.collection
   deleteDoc = deleteDoc ?? mod.oe ?? mod.deleteDoc
   writeBatch = writeBatch ?? mod.qs ?? mod.writeBatch
+  addDoc = addDoc ?? mod.addDoc
 
   // updateDoc도 필수 요건에 추가
-  if (setDoc && doc && collection && deleteDoc) {
-    return { setDoc, doc, collection, deleteDoc, writeBatch }
+  if (setDoc && doc && collection && deleteDoc && addDoc) {
+    return { setDoc, doc, collection, deleteDoc, writeBatch, addDoc }
   }
 
   return null
@@ -404,5 +410,50 @@ function pickAppActions(mod: any) {
     }
   }
   // If minified and we can't easily find it, rely on the exact ID 99093
+  return null
+}
+
+function resolveDeckActions(req: any) {
+  window.__CCFOLIA_MOD_CACHE__ ??= {}
+
+  const cachedId = window.__CCFOLIA_MOD_CACHE__.deckActionsId
+  if (cachedId != null) {
+    try {
+      const mod = req(cachedId)
+      if (pickDeckActions(mod)) return mod
+    } catch { }
+  }
+
+  try {
+    const mod = req(72696)
+    if (pickDeckActions(mod)) {
+      window.__CCFOLIA_MOD_CACHE__.deckActionsId = 72696
+      return mod
+    }
+  } catch { }
+
+  const deckActionsId = findModuleIdByExportShape(req, pickDeckActions)
+  if (deckActionsId != null) {
+    window.__CCFOLIA_MOD_CACHE__.deckActionsId = deckActionsId
+    return req(deckActionsId)
+  }
+
+  return null
+}
+
+function pickDeckActions(mod: any) {
+  if (!mod || typeof mod !== "object") return null
+
+  if (typeof mod.addRoomDeck === "function" || typeof mod.updateRoomDeck === "function") return mod
+
+  for (const key of Object.keys(mod)) {
+    const val = mod[key]
+    if (typeof val === "function") {
+      const fnStr = val.toString()
+      if (fnStr.includes('"update-deck"') || fnStr.includes("createPlayingCards")) {
+        return mod
+      }
+    }
+  }
   return null
 }

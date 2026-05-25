@@ -46,6 +46,7 @@ declare global {
       riaId?: number
       raId?: number
       appActionsId?: number
+      deckActionsId?: number
     }
   }
 }

@@ -143,6 +143,12 @@ export const ccf = {
   },
   getOpenMenuInfo: () => ccfoliaRPC<any>("menus.getOpenMenuInfo"),
 
+  // ccf.decks
+  decks: {
+    create: (deckPayload: Record<string, any>, items: Array<any>) =>
+      ccfoliaRPC<string>("decks.create", deckPayload, items)
+  },
+
   // ccf.messages
   messages: {
     getAll: () => ccfoliaRPC<any[]>("messages.getAll"),

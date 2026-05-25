@@ -692,7 +692,8 @@ const onKeyDown = (e: KeyboardEvent) => {
 
           if (
             tokenData._type === "roomItem" ||
-            tokenData._type === "roomMarker"
+            tokenData._type === "roomMarker" ||
+            tokenData._type === "roomDeck"
           ) {
             bundleItems.push({
               kind: tokenData._type,
