@@ -10,6 +10,11 @@ export interface CcfoliaParam {
   value: string
 }
 
+export interface CcfoliaCharacterFace {
+  label: string
+  iconUrl: string
+}
+
 export interface CcfoliaCharacter {
   _id: string
   name: string
@@ -20,6 +25,7 @@ export interface CcfoliaCharacter {
   invisible: boolean
   commands?: string
   owner?: string
+  faces: CcfoliaCharacterFace[]
   [key: string]: any
 }
 

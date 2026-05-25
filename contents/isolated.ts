@@ -13,6 +13,7 @@ import {
 } from "~utils/feature-manager"
 import { initContextMenuActions } from "~features/context-menu-actions"
 import { initMouseTracker } from "~utils/mouse-tracker"
+import { initExpressionButton } from "~features/expression-btn"
 
 import { initChatLogPager } from "../features/log-pager"
 import { initToastObserver } from "../utils/isolated/toast"
@@ -45,7 +46,8 @@ const isolatedFeatures: FeatureDefinition[] = [
   { id: "clipboard", name: "커스텀 클립보드", init: initCustomClipboard },
   { id: "mouse-tracker", name: "마우스 추적기", init: initMouseTracker },
   { id: "alt-click", name: "이미지 돋보기", init: initImageMagnifier }, // 👈 기능 추가!
-  { id: "bulk-drag", name: "다중 선택 컨텍스트 메뉴", init: initContextMenuActions }
+  { id: "bulk-drag", name: "다중 선택 컨텍스트 메뉴", init: initContextMenuActions },
+  { id: "expression-btn", name: "표정 변경 버튼", init: initExpressionButton }
 ]
 
 // 실행!

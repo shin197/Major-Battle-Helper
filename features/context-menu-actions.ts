@@ -46,6 +46,10 @@ async function injectContextMenuItems(paper: HTMLElement) {
 
   if (ul.querySelector("[data-helper-injected='true']")) return
 
+  if (ul.parentElement) {
+    ul.parentElement.style.width = "20ch"
+  }
+
   const sampleLi = ul.querySelector("li[role='menuitem']")
   const liClass = sampleLi?.className ?? ITEM_CLASS
 
@@ -55,14 +59,29 @@ async function injectContextMenuItems(paper: HTMLElement) {
   const hasHideable = selectedObjects.some(obj => obj.selectType === "item" || obj.selectType === "character")
   const hasLockable = selectedObjects.some(obj => obj.selectType === "item" || obj.selectType === "marker" || obj.selectType === "deck")
 
-  // 도우미 함수: 버튼 생성 및 클릭 핸들러 바인딩
-  const createBtn = (text: string, onClick: () => Promise<void>) => {
+  const createBtn = (text: string, onClick: () => Promise<void>, hotkey?: string) => {
     const li = document.createElement("li")
     li.className = liClass
     li.tabIndex = -1
     li.role = "menuitem"
     li.dataset.helperInjected = "true"
-    li.textContent = text
+    
+    if (hotkey) {
+      li.style.display = "flex"
+      li.style.justifyContent = "space-between"
+      
+      const textSpan = document.createElement("span")
+      textSpan.textContent = text
+      
+      const hotkeySpan = document.createElement("span")
+      hotkeySpan.textContent = hotkey
+      hotkeySpan.style.opacity = "0.7"
+      
+      li.appendChild(textSpan)
+      li.appendChild(hotkeySpan)
+    } else {
+      li.textContent = text
+    }
 
     li.addEventListener("click", async (e) => {
       e.stopPropagation()
@@ -97,7 +116,7 @@ async function injectContextMenuItems(paper: HTMLElement) {
         console.error("[BattleHelper] 다중 객체 숨기기 중 오류:", err)
         showToast("❗ 객체를 숨기는 중 오류가 발생했습니다.")
       }
-    })
+    }, "S")
     ul.append(hideLi)
   }
 
@@ -133,6 +152,34 @@ async function injectContextMenuItems(paper: HTMLElement) {
         if (updates.length > 0) {
           await ccf.tokens.patchBulk(updates)
           showToast(`✅ ${updates.length}개의 토큰을 ${labelText}했습니다.`)
+
+          // 위치 고정(locked)을 변경했을 때 DOM 속성 토글 및 선택 유지(재선택)
+          if (propName === "locked") {
+            // DOM 테두리 색상 즉각 토글
+            validTokensInfo.forEach(obj => {
+              // DOM 상에서 해당 id를 포함하는 요소를 찾음
+              const el = Array.from(document.querySelectorAll('[data-bulk-selected="true"]'))
+                .find(node => {
+                  const domId = (node as HTMLElement).dataset.bulkId || (node.querySelector("div[id]")?.id)
+                  return domId && (domId.includes(obj.id) || obj.id.includes(domId))
+                }) as HTMLElement
+              if (el) {
+                if (newState) el.setAttribute("data-bulk-locked", "")
+                else el.removeAttribute("data-bulk-locked")
+              }
+            })
+
+            // 잠금 설정(true)시 코코포리아가 선택을 해제하는 것을 방지하기 위해 재선택
+            if (newState) {
+              const objectsToSelect = validTokensInfo.map(obj => ({
+                selectType: obj.selectType,
+                id: obj.id
+              }))
+              setTimeout(() => {
+                ccf.setSelectedObjects(objectsToSelect).catch(() => {})
+              }, 50)
+            }
+          }
         }
       } catch (err) {
         console.error(`[BattleHelper] 다중 객체 ${labelText} 중 오류:`, err)
@@ -140,13 +187,19 @@ async function injectContextMenuItems(paper: HTMLElement) {
       }
     }
 
-    ul.append(createBtn("위치 고정", () => setProperty("locked", true, "위치 고정")))
-    ul.append(createBtn("위치 고정 해제", () => setProperty("locked", false, "위치 고정 해제")))
+    // 모두 locked가 true라면 "위치 고정 해제" 버튼, 아니면 "위치 고정" 버튼
+    const isAllLocked = selectedTokensData.length > 0 && selectedTokensData.every(t => t.locked === true)
+
+    if (isAllLocked) {
+      ul.append(createBtn("위치 고정 해제", () => setProperty("locked", false, "위치 고정 해제"), "L"))
+    } else {
+      ul.append(createBtn("위치 고정", () => setProperty("locked", true, "위치 고정"), "L"))
+    }
 
     if (isAllFreezed) {
-      ul.append(createBtn("크기 고정 해제", () => setProperty("freezed", false, "크기 고정 해제")))
+      ul.append(createBtn("크기 고정 해제", () => setProperty("freezed", false, "크기 고정 해제"), "F"))
     } else {
-      ul.append(createBtn("크기 고정", () => setProperty("freezed", true, "크기 고정")))
+      ul.append(createBtn("크기 고정", () => setProperty("freezed", true, "크기 고정"), "F"))
     }
 
     // ==========================================
