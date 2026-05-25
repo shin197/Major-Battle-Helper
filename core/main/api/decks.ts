@@ -26,9 +26,9 @@ export const decks = {
     // 💡 3. 페이로드 조립 (사용자 제공 샘플 기반)
     const payload = {
       ...deckPayload,
-      x: typeof deckPayload.x === "number" && !isNaN(deckPayload.x) ? deckPayload.x : 0,
-      y: typeof deckPayload.y === "number" && !isNaN(deckPayload.y) ? deckPayload.y : 0,
-      z: typeof deckPayload.z === "number" ? deckPayload.z : 99,
+      x: typeof deckPayload.x === "number" && !isNaN(deckPayload.x) ? deckPayload.x : -1,
+      y: typeof deckPayload.y === "number" && !isNaN(deckPayload.y) ? deckPayload.y : -1,
+      z: 99, // 덱은 z값을 99로 고정
       zIndex: typeof deckPayload.zIndex === "number" ? deckPayload.zIndex : maxZIndex,
       width: deckPayload.width || 4,
       height: deckPayload.height || 4,

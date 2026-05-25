@@ -152,7 +152,7 @@ async function injectContextMenuItems(paper: HTMLElement) {
     // ==========================================
     // [3] "겹침 우선도(z) 직접 설정..." 버튼
     // ==========================================
-    ul.append(createBtn("겹침 우선도 직접 설정...", async () => {
+    ul.append(createBtn("겹침 우선도...", async () => {
       const input = window.prompt("새로운 겹침 우선도(z) 값을 입력하세요.\n(숫자만 입력 시 고정, '+5' 또는 '-2' 입력 시 현재 값에서 증감합니다.)")
       if (input === null || input.trim() === "") return
 
@@ -166,16 +166,17 @@ async function injectContextMenuItems(paper: HTMLElement) {
 
       try {
         const updates = validTokensInfo.map(obj => {
+          const isDeck = obj._type === "roomDeck"
           let newZ = parsedValue
           if (isRelative) {
             const currentTokenData = allTokens.find(t => t.id === obj.id)
-            const currentZ = currentTokenData?.z || 0
+            const currentZ = isDeck ? (currentTokenData?.zIndex || 0) : (currentTokenData?.z || 0)
             newZ = currentZ + parsedValue
           }
           return {
             id: obj.id,
             _type: obj._type,
-            data: { z: newZ }
+            data: isDeck ? { zIndex: newZ } : { z: newZ }
           }
         })
 
