@@ -316,6 +316,27 @@ export const characters = {
     }
   },
 
+  setFace: async (name: string, face: string) => {
+    const { fsTools, db, roomId } = getServices()
+    const { setDoc, doc, collection } = fsTools
+
+    const target = characters.getByName(name)
+    if (!target) throw new Error(`캐릭터 '${name}'를 찾을 수 없습니다.`)
+
+    const faceUrl = target.faces.find((f) => f.label === face).iconUrl
+
+    const targetRef = doc(
+      collection(db, "rooms", roomId, "characters"),
+      target._id
+    )
+    await setDoc(
+      targetRef,
+      { iconUrl: faceUrl, updatedAt: Date.now() },
+      { merge: true }
+    )
+    console.log(`[API] ${target.name}: 표정 변경 완료`)
+  },
+
   inspect: (name: string) => {
     const char = characters.getByName(name)
     console.log(`[API] Inspect '${name}':`, char)

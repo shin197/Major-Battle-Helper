@@ -1,5 +1,7 @@
 import { ANCHOR_SPECS } from "~utils/anchors"
 import { getOrFindAnchor } from "~utils/elements"
+import { ccf } from "~core/isolated/ccfolia-api"
+import { getCurrentCharacterName } from "~features/slot-shortcut"
 
 const BTN_ID = "ccf-helper-expression-btn"
 
@@ -31,8 +33,9 @@ export async function initExpressionButton() {
 
       const exprBtn = document.createElement("button")
       exprBtn.id = BTN_ID
-      // 코코포리아 기존 버튼들과 유사한 스타일을 위해 클래스 복사 (또는 인라인 스타일)
-      exprBtn.className = anchorBtn.className
+      // 코코포리아 기존 버튼들과 유사한 스타일을 위해 클래스 복사 (Mui-disabled 등 비활성화 클래스는 제거)
+      exprBtn.className = anchorBtn.className.replace(/Mui-disabled/g, "").trim()
+      exprBtn.disabled = false
       exprBtn.style.minWidth = "auto"
       exprBtn.style.padding = "6px 6px"
 
@@ -43,12 +46,103 @@ export async function initExpressionButton() {
         </svg>
       `
 
-      // 5. 클릭 이벤트 (추후 세부 구현 예정)
-      exprBtn.addEventListener("click", (e) => {
+      // 5. 클릭 이벤트: 표정 목록 드롭다운 표시
+      exprBtn.addEventListener("click", async (e) => {
         e.preventDefault()
         e.stopPropagation()
-        console.log("[BattleHelper] 표정 변경 버튼 클릭됨 - 기능 미구현")
-        // TODO: 표정 목록 표시 및 변경 로직 추가
+
+        // 이미 드롭다운이 열려있다면 닫기
+        const existingDropdown = document.getElementById("ccf-helper-expression-dropdown")
+        if (existingDropdown) {
+          existingDropdown.remove()
+          return
+        }
+
+        // 현재 활성화된 캐릭터 이름 가져오기
+
+        const charName = getCurrentCharacterName()
+        if (!charName) {
+          console.warn("[BattleHelper] 현재 선택된 캐릭터가 없습니다.")
+          return
+        }
+
+        // 캐릭터 데이터 가져오기
+
+        const character = await ccf.getCharacterByName(charName)
+        if (!character || !character.faces || character.faces.length === 0) {
+          console.warn("[BattleHelper] 캐릭터를 찾을 수 없거나 표정 데이터가 없습니다.")
+          return
+        }
+
+        // 커스텀 드롭다운 컨테이너 생성
+        const dropdown = document.createElement("div")
+        dropdown.id = "ccf-helper-expression-dropdown"
+        dropdown.style.position = "absolute"
+        dropdown.style.zIndex = "9999"
+        dropdown.style.backgroundColor = "#424242" // 다크테마 기준 (필요시 CSS 변수 등 활용)
+        dropdown.style.border = "1px solid rgba(255,255,255,0.12)"
+        dropdown.style.borderRadius = "4px"
+        dropdown.style.boxShadow = "0px 5px 5px -3px rgba(0,0,0,0.2), 0px 8px 10px 1px rgba(0,0,0,0.14), 0px 3px 14px 2px rgba(0,0,0,0.12)"
+        dropdown.style.padding = "8px 0"
+        dropdown.style.maxHeight = "300px"
+        dropdown.style.overflowY = "auto"
+        dropdown.style.minWidth = "150px"
+        dropdown.style.color = "#fff"
+
+        // 버튼 기준 왼쪽 위로 열리도록 위치 조정 (채팅창이 우측 하단이므로)
+        const rect = exprBtn.getBoundingClientRect()
+        dropdown.style.bottom = `${window.innerHeight - rect.top + 4}px`
+        dropdown.style.right = `${window.innerWidth - rect.right}px`
+
+        // 각 표정을 순회하며 항목 생성
+        character.faces.forEach((face: any, index: number) => {
+          const item = document.createElement("div")
+          item.style.display = "flex"
+          item.style.alignItems = "center"
+          item.style.padding = "6px 6px"
+          item.style.cursor = "pointer"
+          item.style.transition = "background-color 0.2s"
+          item.onmouseenter = () => { item.style.backgroundColor = "rgba(255,255,255,0.08)" }
+          item.onmouseleave = () => { item.style.backgroundColor = "transparent" }
+
+          const img = document.createElement("img")
+          img.src = face.iconUrl
+          img.style.width = "48px"
+          img.style.height = "48px"
+          img.style.borderRadius = "50%"
+          img.style.marginRight = "12px"
+          img.style.objectFit = "cover"
+
+          const label = document.createElement("span")
+          label.textContent = face.label || `표정 ${index + 1}`
+          label.style.fontSize = "14px"
+
+          item.appendChild(img)
+          item.appendChild(label)
+
+          item.addEventListener("click", async (ev) => {
+            ev.stopPropagation()
+            // TODO: 실제 표정 변경 로직 구현. 
+            // 코코포리아는 보드 위 캐릭터의 표정을 angle(인덱스)로 관리할 가능성이 큼.
+            // 일단 콘솔에 찍고 patchCharacter는 차후 확정
+            // console.log(`[BattleHelper] ${charName} 표정 변경 선택됨:`, face.label)
+            ccf.setCharacterFace(charName, face.label)
+            dropdown.remove()
+          })
+
+          dropdown.appendChild(item)
+        })
+
+        document.body.appendChild(dropdown)
+
+        // 외부 클릭 시 드롭다운 닫기
+        const closeDropdown = (ev: MouseEvent) => {
+          if (!dropdown.contains(ev.target as Node) && ev.target !== exprBtn) {
+            dropdown.remove()
+            document.removeEventListener("mousedown", closeDropdown)
+          }
+        }
+        document.addEventListener("mousedown", closeDropdown)
       })
 
       // 6. 채팅 팔레트 버튼의 직전 형제 노드로 삽입

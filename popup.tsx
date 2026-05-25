@@ -346,6 +346,14 @@ export default function IndexPopup() {
           }
           onToggle={handleSettingsChange}
         />
+        <FeatureToggle
+          id="face-button"
+          label="표정 변경 버튼"
+          description={
+            "캐릭터의 표정을 바꾸는 버튼을 추가합니다."
+          }
+          onToggle={handleSettingsChange}
+        />
       </div>
 
       {hasChanged && (

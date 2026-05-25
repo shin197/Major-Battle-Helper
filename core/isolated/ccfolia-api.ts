@@ -57,6 +57,8 @@ export const ccf = {
       ccfoliaRPC<void>("characters.toggleProp", namePart, prop),
     setCommands: (namePart: string, newCommands: string) =>
       ccfoliaRPC<void>("characters.setCommands", namePart, newCommands),
+    setFace: (namePart: string, face: string) =>
+      ccfoliaRPC<void>("characters.setFace", namePart, face),
     patch: (
       namePart: string,
       updates: {
@@ -97,6 +99,9 @@ export const ccf = {
   setCharacterCommands: async (namePart: string, newCommands: string) =>
     ccfoliaRPC<void>("characters.setCommands", namePart, newCommands),
 
+  setCharacterFace: async (namePart: string, face: string) =>
+    ccfoliaRPC<void>("characters.setFace", namePart, face),
+
   patchCharacter: async (
     namePart: string,
     updates: {
@@ -121,11 +126,11 @@ export const ccf = {
       ccfoliaRPC<string>("tokens.create", type, payload),
     delete: (tokenId: string) => ccfoliaRPC<void>("tokens.delete", tokenId),
     toggleInspector: () => ccfoliaRPC<void>("tokens.toggleInspector"),
-    setSelectedObjects: (objects: Array<{ selectType: string; id: string }>) => 
+    setSelectedObjects: (objects: Array<{ selectType: string; id: string }>) =>
       ccfoliaRPC<void>("tokens.setSelectedObjects", objects)
   },
   getAllTokens: () => ccfoliaRPC<any[]>("tokens.getAll"),
-  setSelectedObjects: (objects: Array<{ selectType: string; id: string }>) => 
+  setSelectedObjects: (objects: Array<{ selectType: string; id: string }>) =>
     ccfoliaRPC<void>("tokens.setSelectedObjects", objects),
   deleteSelectedObjectsWithUndo: () => ccfoliaRPC<boolean>("tokens.deleteSelectedObjectsWithUndo"),
   patchToken: (tokenId: string, updates: Record<string, any>) =>
@@ -154,7 +159,7 @@ export const ccf = {
     getAll: () => ccfoliaRPC<any[]>("messages.getAll"),
     delete: (messageId: string) => ccfoliaRPC<void>("messages.delete", messageId),
     edit: (messageId: string, newText: string) => ccfoliaRPC<void>("messages.edit", messageId, newText),
-    sendSystemMessage: (text: string, channel?: { channel: string; channelName: string }) => 
+    sendSystemMessage: (text: string, channel?: { channel: string; channelName: string }) =>
       ccfoliaRPC<void>("messages.sendSystemMessage", text, channel),
     sendMessageAsChar: (text: string, charName: string, iconUrl?: string, color?: string) =>
       ccfoliaRPC<void>("messages.sendMessageAsChar", text, charName, iconUrl, color),
