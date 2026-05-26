@@ -313,12 +313,12 @@ const beginGroupDrag = (
   dragStart = { x: startX, y: startY }
   currentLeaderId = leaderId
 
-  activeFollowerIds = getFollowers()
-    .map((f) => findItemIdFromDom(f))
-    .filter(Boolean) as string[]
+  // activeFollowerIds = getFollowers()
+  //   .map((f) => findItemIdFromDom(f))
+  //   .filter(Boolean) as string[]
 
-  createFollowerGhosts()
-  document.body.setAttribute(DRAGGING_ATTR, "true")
+  // createFollowerGhosts()
+  // document.body.setAttribute(DRAGGING_ATTR, "true")
 
   leaderStartDataPromise = fetchTokenData(leaderId)
 }
@@ -650,62 +650,62 @@ const onKeyDown = (e: KeyboardEvent) => {
     if (selected.size === 0) return
     e.preventDefault()
 
-    ;(async () => {
-      const tokensToLock = Array.from(selected)
-      const validTokensInfo = []
+      ; (async () => {
+        const tokensToLock = Array.from(selected)
+        const validTokensInfo = []
 
-      for (const el of tokensToLock) {
-        const domId = findItemIdFromDom(el)
-        if (!domId) continue
+        for (const el of tokensToLock) {
+          const domId = findItemIdFromDom(el)
+          if (!domId) continue
 
-        const tokenData = await fetchTokenData(domId)
-        if (!tokenData) continue
+          const tokenData = await fetchTokenData(domId)
+          if (!tokenData) continue
 
-        const targetType = tokenData._type
-        if (targetType === "roomItem" || targetType === "roomMarker" || targetType === "roomDeck") {
-          validTokensInfo.push({ id: tokenData.id || tokenData._id || domId, _type: targetType, locked: tokenData.locked })
-        }
-      }
-
-      if (validTokensInfo.length === 0) return
-
-      const isAllLocked = validTokensInfo.every(t => t.locked === true)
-      const newState = !isAllLocked
-      const labelText = newState ? "위치 고정" : "위치 고정 해제"
-
-      const updates = validTokensInfo.map(obj => ({
-        id: obj.id,
-        _type: obj._type,
-        data: { locked: newState }
-      }))
-
-      if (updates.length > 0) {
-        await ccf.tokens.patchBulk(updates)
-        showToast(`✅ ${updates.length}개의 토큰을 ${labelText}했습니다.`)
-        
-        // DOM 테두리 색상 즉각 토글
-        tokensToLock.forEach(el => {
-          if (newState) el.setAttribute("data-bulk-locked", "")
-          else el.removeAttribute("data-bulk-locked")
-        })
-
-        // 잠금 설정(true)시 코코포리아가 선택을 해제하는 것을 방지하기 위해 재선택
-        if (newState) {
-          const objectsToSelect = validTokensInfo.map(obj => {
-            const selectType = obj._type === "roomItem" ? "item" :
-              obj._type === "roomMarker" ? "marker" :
-              obj._type === "roomDeck" ? "deck" : ""
-            return { selectType, id: obj.id }
-          }).filter(o => o.selectType)
-          
-          if (objectsToSelect.length > 0) {
-            setTimeout(() => {
-              ccf.setSelectedObjects(objectsToSelect).catch(() => {})
-            }, 50)
+          const targetType = tokenData._type
+          if (targetType === "roomItem" || targetType === "roomMarker" || targetType === "roomDeck") {
+            validTokensInfo.push({ id: tokenData.id || tokenData._id || domId, _type: targetType, locked: tokenData.locked })
           }
         }
-      }
-    })()
+
+        if (validTokensInfo.length === 0) return
+
+        const isAllLocked = validTokensInfo.every(t => t.locked === true)
+        const newState = !isAllLocked
+        const labelText = newState ? "위치 고정" : "위치 고정 해제"
+
+        const updates = validTokensInfo.map(obj => ({
+          id: obj.id,
+          _type: obj._type,
+          data: { locked: newState }
+        }))
+
+        if (updates.length > 0) {
+          await ccf.tokens.patchBulk(updates)
+          showToast(`✅ ${updates.length}개의 토큰을 ${labelText}했습니다.`)
+
+          // DOM 테두리 색상 즉각 토글
+          tokensToLock.forEach(el => {
+            if (newState) el.setAttribute("data-bulk-locked", "")
+            else el.removeAttribute("data-bulk-locked")
+          })
+
+          // 잠금 설정(true)시 코코포리아가 선택을 해제하는 것을 방지하기 위해 재선택
+          if (newState) {
+            const objectsToSelect = validTokensInfo.map(obj => {
+              const selectType = obj._type === "roomItem" ? "item" :
+                obj._type === "roomMarker" ? "marker" :
+                  obj._type === "roomDeck" ? "deck" : ""
+              return { selectType, id: obj.id }
+            }).filter(o => o.selectType)
+
+            if (objectsToSelect.length > 0) {
+              setTimeout(() => {
+                ccf.setSelectedObjects(objectsToSelect).catch(() => { })
+              }, 50)
+            }
+          }
+        }
+      })()
     return
   }
 
@@ -721,40 +721,40 @@ const onKeyDown = (e: KeyboardEvent) => {
     if (selected.size === 0) return
     e.preventDefault()
 
-    ;(async () => {
-      const tokensToToggle = Array.from(selected)
-      const validTokensInfo = []
+      ; (async () => {
+        const tokensToToggle = Array.from(selected)
+        const validTokensInfo = []
 
-      for (const el of tokensToToggle) {
-        const domId = findItemIdFromDom(el)
-        if (!domId) continue
+        for (const el of tokensToToggle) {
+          const domId = findItemIdFromDom(el)
+          if (!domId) continue
 
-        const tokenData = await fetchTokenData(domId)
-        if (!tokenData) continue
+          const tokenData = await fetchTokenData(domId)
+          if (!tokenData) continue
 
-        const targetType = tokenData._type
-        if (targetType === "roomItem" || targetType === "roomMarker" || targetType === "roomDeck") {
-          validTokensInfo.push({ id: tokenData.id || tokenData._id || domId, _type: targetType, freezed: tokenData.freezed })
+          const targetType = tokenData._type
+          if (targetType === "roomItem" || targetType === "roomMarker" || targetType === "roomDeck") {
+            validTokensInfo.push({ id: tokenData.id || tokenData._id || domId, _type: targetType, freezed: tokenData.freezed })
+          }
         }
-      }
 
-      if (validTokensInfo.length === 0) return
+        if (validTokensInfo.length === 0) return
 
-      const isAllFreezed = validTokensInfo.every(t => t.freezed === true)
-      const newState = !isAllFreezed
-      const labelText = newState ? "크기 고정" : "크기 고정 해제"
+        const isAllFreezed = validTokensInfo.every(t => t.freezed === true)
+        const newState = !isAllFreezed
+        const labelText = newState ? "크기 고정" : "크기 고정 해제"
 
-      const updates = validTokensInfo.map(obj => ({
-        id: obj.id,
-        _type: obj._type,
-        data: { freezed: newState }
-      }))
+        const updates = validTokensInfo.map(obj => ({
+          id: obj.id,
+          _type: obj._type,
+          data: { freezed: newState }
+        }))
 
-      if (updates.length > 0) {
-        await ccf.tokens.patchBulk(updates)
-        showToast(`✅ ${updates.length}개의 토큰을 ${labelText}했습니다.`)
-      }
-    })()
+        if (updates.length > 0) {
+          await ccf.tokens.patchBulk(updates)
+          showToast(`✅ ${updates.length}개의 토큰을 ${labelText}했습니다.`)
+        }
+      })()
     return
   }
 
@@ -770,36 +770,36 @@ const onKeyDown = (e: KeyboardEvent) => {
     if (selected.size === 0) return
     e.preventDefault()
 
-    ;(async () => {
-      const tokensToHide = Array.from(selected)
-      const validTokensInfo = []
+      ; (async () => {
+        const tokensToHide = Array.from(selected)
+        const validTokensInfo = []
 
-      for (const el of tokensToHide) {
-        const domId = findItemIdFromDom(el)
-        if (!domId) continue
+        for (const el of tokensToHide) {
+          const domId = findItemIdFromDom(el)
+          if (!domId) continue
 
-        const tokenData = await fetchTokenData(domId)
-        if (!tokenData) continue
+          const tokenData = await fetchTokenData(domId)
+          if (!tokenData) continue
 
-        const targetType = tokenData._type
-        if (targetType === "roomItem" || targetType === "roomCharacter") {
-          validTokensInfo.push({ id: tokenData.id || tokenData._id || domId, _type: targetType })
+          const targetType = tokenData._type
+          if (targetType === "roomItem" || targetType === "roomCharacter") {
+            validTokensInfo.push({ id: tokenData.id || tokenData._id || domId, _type: targetType })
+          }
         }
-      }
 
-      if (validTokensInfo.length === 0) return
+        if (validTokensInfo.length === 0) return
 
-      const updates = validTokensInfo.map(obj => ({
-        id: obj.id,
-        _type: obj._type,
-        data: { active: false }
-      }))
+        const updates = validTokensInfo.map(obj => ({
+          id: obj.id,
+          _type: obj._type,
+          data: { active: false }
+        }))
 
-      if (updates.length > 0) {
-        await ccf.tokens.patchBulk(updates)
-        showToast(`✅ ${updates.length}개의 토큰을 숨겼습니다.`)
-      }
-    })()
+        if (updates.length > 0) {
+          await ccf.tokens.patchBulk(updates)
+          showToast(`✅ ${updates.length}개의 토큰을 숨겼습니다.`)
+        }
+      })()
     return
   }
 
