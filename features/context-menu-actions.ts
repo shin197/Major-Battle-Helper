@@ -39,25 +39,12 @@ async function injectContextMenuItems(paper: HTMLElement) {
   if (!ul) return
 
   const menuInfo = await ccf.menus.getOpenMenuInfo()
-  if (!menuInfo || menuInfo.type !== "objects") return
-
-  const selectedObjects = menuInfo.id as Array<{ selectType: string, id: string }>
-  if (!Array.isArray(selectedObjects) || selectedObjects.length === 0) return
+  if (!menuInfo) return
 
   if (ul.querySelector("[data-helper-injected='true']")) return
 
-  if (ul.parentElement) {
-    ul.parentElement.style.width = "20ch"
-  }
-
   const sampleLi = ul.querySelector("li[role='menuitem']")
   const liClass = sampleLi?.className ?? ITEM_CLASS
-
-  // ==========================================
-  // 유효성 검사 (어떤 버튼을 표시할지 결정)
-  // ==========================================
-  const hasHideable = selectedObjects.some(obj => obj.selectType === "item" || obj.selectType === "character")
-  const hasLockable = selectedObjects.some(obj => obj.selectType === "item" || obj.selectType === "marker" || obj.selectType === "deck")
 
   const createBtn = (text: string, onClick: () => Promise<void>, hotkey?: string) => {
     const li = document.createElement("li")
@@ -65,18 +52,18 @@ async function injectContextMenuItems(paper: HTMLElement) {
     li.tabIndex = -1
     li.role = "menuitem"
     li.dataset.helperInjected = "true"
-    
+
     if (hotkey) {
       li.style.display = "flex"
       li.style.justifyContent = "space-between"
-      
+
       const textSpan = document.createElement("span")
       textSpan.textContent = text
-      
+
       const hotkeySpan = document.createElement("span")
       hotkeySpan.textContent = hotkey
       hotkeySpan.style.opacity = "0.7"
-      
+
       li.appendChild(textSpan)
       li.appendChild(hotkeySpan)
     } else {
@@ -91,6 +78,68 @@ async function injectContextMenuItems(paper: HTMLElement) {
     })
     return li
   }
+
+  // ==========================================
+  // [단일 객체 우클릭 메뉴] - 덱
+  // ==========================================
+  if (menuInfo.type === "deck") {
+    const deckId = menuInfo.id as string
+
+    const cloneBtn = createBtn("복제", async () => {
+      const allTokens = await ccf.tokens.getAll()
+      const targetDeck = allTokens.find(t => t._type === "roomDeck" && (t.id === deckId || t._id === deckId))
+
+      if (targetDeck) {
+        const items = Object.values(targetDeck.items || {})
+        const newDeckPayload = {
+          x: targetDeck.x + 1,
+          y: targetDeck.y + 1,
+          width: targetDeck.width,
+          height: targetDeck.height,
+          locked: targetDeck.locked,
+          freezed: targetDeck.freezed,
+          coverImageUrl: targetDeck.coverImageUrl,
+          zIndex: targetDeck.zIndex
+        }
+        await ccf.decks.create(newDeckPayload, items)
+        showToast("✅ 덱이 복제되었습니다.")
+      } else {
+        showToast("❗ 덱 정보를 찾을 수 없습니다.")
+      }
+    })
+
+    const listItems = Array.from(ul.children)
+    const deleteLi = listItems.find(li => li.textContent?.includes("삭제"))
+
+    if (deleteLi) {
+      ul.insertBefore(cloneBtn, deleteLi)
+
+      const hr = document.createElement("hr")
+      hr.style.margin = "4px 0"
+      hr.style.border = "none"
+      // hr.style.borderBottom = "1px solid rgba(255,255,255,0.12)"
+      ul.insertBefore(hr, deleteLi)
+    } else {
+      ul.appendChild(cloneBtn)
+    }
+
+    return
+  }
+
+  // ==========================================
+  // [다중 선택 우클릭 메뉴] - objects
+  // ==========================================
+  if (menuInfo.type !== "objects") return
+
+  const selectedObjects = menuInfo.id as Array<{ selectType: string, id: string }>
+  if (!Array.isArray(selectedObjects) || selectedObjects.length === 0) return
+
+  if (ul.parentElement) {
+    ul.parentElement.style.width = "20ch"
+  }
+
+  const hasHideable = selectedObjects.some(obj => obj.selectType === "item" || obj.selectType === "character")
+  const hasLockable = selectedObjects.some(obj => obj.selectType === "item" || obj.selectType === "marker" || obj.selectType === "deck")
 
   // ==========================================
   // [1] "집어넣기" 버튼
@@ -176,7 +225,7 @@ async function injectContextMenuItems(paper: HTMLElement) {
                 id: obj.id
               }))
               setTimeout(() => {
-                ccf.setSelectedObjects(objectsToSelect).catch(() => {})
+                ccf.setSelectedObjects(objectsToSelect).catch(() => { })
               }, 50)
             }
           }
@@ -238,7 +287,7 @@ async function injectContextMenuItems(paper: HTMLElement) {
           showToast(`✅ ${updates.length}개의 토큰의 겹침 우선도를 설정했습니다.`)
         }
       } catch (err) {
-        console.error("[BattleHelper] 다중 객체 겹침 우선도 설정 중 오류:", err)
+        console.error("[MajorBattle] 다중 객체 겹침 우선도 설정 중 오류:", err)
         showToast("❗ 겹침 우선도 설정 중 오류가 발생했습니다.")
       }
     }))

@@ -1,7 +1,7 @@
 import { getServices } from "../hijack"
 
 export const menus = {
-  getOpenMenuInfo: (): { type: string; id: string | Array<{selectType: string, id: string}> | null } | null => {
+  getOpenMenuInfo: (): { type: string; id: string | Array<{ selectType: string, id: string }> | null } | null => {
     // console.log("%c[CCFOLIA-API] getOpenMenuInfo 호출됨", "color: #2196f3")
     const { store } = getServices()
     const state = store.getState().app?.state
@@ -40,6 +40,26 @@ export const menus = {
         type: "objects",
         flagKey: "openRoomSelectedObjectsMenu",
         idKey: "selectedObjects"
+      },
+      {
+        type: "character-detail",
+        flagKey: "openRoomCharacter",
+        idKey: "openRoomCharacterId"
+      },
+      {
+        type: "deck-detail",
+        flagKey: "openRoomDeckDetail",
+        idKey: "openRoomDeckDetailId"
+      },
+      {
+        type: "marker-detail",
+        flagKey: "openRoomMarkerDetail",
+        idKey: "openRoomMarkerDetailId"
+      },
+      {
+        type: "item-detail",
+        flagKey: "openRoomPanelDetail",
+        idKey: "openRoomPanelDetailId"
       }
     ]
 

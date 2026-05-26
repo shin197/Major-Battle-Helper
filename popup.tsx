@@ -347,6 +347,14 @@ export default function IndexPopup() {
           onToggle={handleSettingsChange}
         />
         <FeatureToggle
+          id="more-menu"
+          label="향상된 메뉴"
+          description={
+            "편집창에서, 토큰을 우클릭 했을 때 더 많은 옵션을 지원합니다."
+          }
+          onToggle={handleSettingsChange}
+        />
+        <FeatureToggle
           id="face-button"
           label="표정 변경 버튼"
           description={
