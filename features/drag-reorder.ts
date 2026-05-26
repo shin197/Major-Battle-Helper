@@ -22,7 +22,6 @@ function setInputValue(input: HTMLInputElement, val: string) {
 
 /* ── DOM 헬퍼 ─────────────────────────────────────────── */
 
-/** 편집 다이얼로그 내 "스테이터스" / "매개변수" 섹션의 행 목록 반환 */
 function getSectionRows(dlg: HTMLElement, sectionTitle: string): HTMLElement[] {
   for (const h of Array.from(dlg.querySelectorAll("h6"))) {
     if (h.textContent?.trim() !== sectionTitle) continue
@@ -32,11 +31,13 @@ function getSectionRows(dlg: HTMLElement, sectionTitle: string): HTMLElement[] {
     const rows: HTMLElement[] = []
     let sib = toolbar.nextElementSibling as HTMLElement | null
     while (sib) {
-      // 다음 섹션 헤더(Toolbar)에 도달하면 중단
       if (sib.classList.contains("MuiToolbar-root")) break
-      // 입력창 행만 수집
-      if (sib.tagName === "DIV" && sib.querySelectorAll("input").length >= 2) {
-        rows.push(sib)
+      if (sib.tagName === "DIV") {
+        const inputs = sib.querySelectorAll("input")
+        const imgs = sib.querySelectorAll("img")
+        if (inputs.length >= 2 || (inputs.length >= 1 && imgs.length >= 1)) {
+          rows.push(sib)
+        }
       }
       sib = sib.nextElementSibling as HTMLElement | null
     }
@@ -45,44 +46,205 @@ function getSectionRows(dlg: HTMLElement, sectionTitle: string): HTMLElement[] {
   return []
 }
 
-/** 행에서 input 값 읽기 */
 function readRow(row: HTMLElement) {
   const inputs = row.querySelectorAll("input")
-  const d: { label: string; value?: string; max?: string } = {
+  const imgs = row.querySelectorAll("img")
+  const d: { label: string; value?: string; max?: string; imgSrc?: string } = {
     label: inputs[0]?.value || ""
   }
   if (inputs[1]) d.value = inputs[1].value || ""
   if (inputs[2]) d.max = inputs[2].value || ""
+  if (imgs[0]) d.imgSrc = imgs[0].src || ""
   return d
 }
 
-/** 행에 값 쓰기 (React bridge) */
-function writeRow(row: HTMLElement, data: { label: string; value?: string; max?: string }) {
+function writeRow(row: HTMLElement, data: { label: string; value?: string; max?: string; imgSrc?: string }) {
   const inputs = row.querySelectorAll("input")
+  const imgs = row.querySelectorAll("img")
+  
   if (inputs[0]) setInputValue(inputs[0], data.label)
   if (inputs[1] && data.value !== undefined) setInputValue(inputs[1], data.value)
   if (inputs[2] && data.max !== undefined) setInputValue(inputs[2], data.max)
+  
+  if (imgs[0] && data.imgSrc !== undefined) {
+    imgs[0].src = data.imgSrc
+  }
 }
 
-/* ── 드래그 앤 드롭 ──────────────────────────────────── */
+function reorder(rows: HTMLElement[], fromIdx: number, toIdx: number) {
+  const data = rows.map(readRow)
+  const [item] = data.splice(fromIdx, 1)
+  data.splice(toIdx, 0, item)
 
-let _dragIdx = -1
-let _rows: HTMLElement[] = []
+  for (let i = 0; i < rows.length; i++) {
+    writeRow(rows[i], data[i])
+  }
+
+  rows[toIdx].style.background = "rgba(33,150,243,0.15)"
+  setTimeout(() => {
+    rows[toIdx].style.background = ""
+  }, 400)
+}
+
+/* ── 이벤트 델리게이션 ──────────────────────────────────── */
+
+let _dragRow: HTMLElement | null = null
+let _dragSectionTitle: string = ""
+let _lastOverRow: HTMLElement | null = null
+let _lastIsAbove: boolean | null = null
+
+function getSectionTitleOfRow(row: HTMLElement): string {
+  let sib = row.previousElementSibling as HTMLElement | null
+  while (sib) {
+    if (sib.classList.contains("MuiToolbar-root")) {
+      return sib.querySelector("h6")?.textContent?.trim() || ""
+    }
+    sib = sib.previousElementSibling as HTMLElement | null
+  }
+  return ""
+}
+
+function setupDragEvents(dlg: HTMLElement) {
+  if (dlg.dataset.bwbrDragEvents === "true") return
+  dlg.dataset.bwbrDragEvents = "true"
+
+  dlg.addEventListener("dragstart", (e) => {
+    const target = e.target as HTMLElement
+    const handle = target.classList?.contains("bwbr-drag-handle") ? target : target.closest?.(".bwbr-drag-handle")
+    const row = target.closest?.("[data-bwbr-row='true']") as HTMLElement
+    
+    if (row && !handle) {
+      e.preventDefault()
+      return
+    }
+    
+    if (handle && row) {
+      _dragRow = row
+      _dragSectionTitle = getSectionTitleOfRow(row)
+      
+      if (e.dataTransfer) {
+        e.dataTransfer.effectAllowed = "move"
+        e.dataTransfer.setDragImage(row, 30, row.offsetHeight / 2)
+      }
+      requestAnimationFrame(() => {
+        row.style.opacity = "0.4"
+      })
+    }
+  })
+
+  dlg.addEventListener("dragend", () => {
+    cleanupDrag()
+  })
+
+  dlg.addEventListener("dragover", (e) => {
+    if (!_dragRow) return
+    const target = e.target as HTMLElement
+    const row = target.closest?.("[data-bwbr-row='true']") as HTMLElement
+    
+    if (row) {
+      const title = getSectionTitleOfRow(row)
+      if (title !== _dragSectionTitle) return
+      
+      e.preventDefault()
+      if (e.dataTransfer) e.dataTransfer.dropEffect = "move"
+      
+      const rect = row.getBoundingClientRect()
+      const isAbove = e.clientY < rect.top + rect.height / 2
+      
+      if (_lastOverRow !== row || _lastIsAbove !== isAbove) {
+        if (_lastOverRow) {
+          _lastOverRow.style.borderTop = ""
+          _lastOverRow.style.borderBottom = ""
+        }
+        
+        let showLine = true
+        if (row === _dragRow) {
+          showLine = false
+        } else {
+          const rows = getSectionRows(dlg, _dragSectionTitle)
+          const fromIdx = rows.indexOf(_dragRow)
+          const toIdx = rows.indexOf(row)
+          
+          if (fromIdx >= 0 && toIdx >= 0) {
+            if (toIdx === fromIdx + 1 && isAbove) showLine = false
+            if (toIdx === fromIdx - 1 && !isAbove) showLine = false
+          }
+        }
+
+        if (showLine) {
+          row.style.borderTop = isAbove ? "2px solid #2196F3" : ""
+          row.style.borderBottom = isAbove ? "" : "2px solid #2196F3"
+        } else {
+          row.style.borderTop = ""
+          row.style.borderBottom = ""
+        }
+        
+        _lastOverRow = row
+        _lastIsAbove = isAbove
+      }
+    }
+  })
+
+  dlg.addEventListener("drop", (e) => {
+    if (!_dragRow) return
+    e.preventDefault()
+    
+    const target = e.target as HTMLElement
+    const dropRow = target.closest?.("[data-bwbr-row='true']") as HTMLElement
+    
+    if (dropRow && dropRow !== _dragRow) {
+      const title = getSectionTitleOfRow(dropRow)
+      if (title === _dragSectionTitle) {
+        const rows = getSectionRows(dlg, _dragSectionTitle)
+        const fromIdx = rows.indexOf(_dragRow)
+        const toIdx = rows.indexOf(dropRow)
+        
+        if (fromIdx >= 0 && toIdx >= 0) {
+          let insertIdx = toIdx
+          if (_lastIsAbove === false) {
+            insertIdx++
+          }
+          if (fromIdx < insertIdx) {
+            insertIdx--
+          }
+          
+          if (fromIdx !== insertIdx) {
+            reorder(rows, fromIdx, insertIdx)
+          }
+        }
+      }
+    }
+    
+    cleanupDrag()
+  })
+}
+
+function cleanupDrag() {
+  if (_dragRow) {
+    _dragRow.style.opacity = "1"
+    _dragRow = null
+  }
+  if (_lastOverRow) {
+    _lastOverRow.style.borderTop = ""
+    _lastOverRow.style.borderBottom = ""
+    _lastOverRow = null
+  }
+  _lastIsAbove = null
+}
 
 function addDragHandles(rows: HTMLElement[]) {
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i]
+    row.dataset.bwbrRow = "true"
+    
     if (row.querySelector(".bwbr-drag-handle")) continue
 
-    // row를 relative로
     row.style.position = "relative"
-
     const handle = document.createElement("div")
     handle.className = "bwbr-drag-handle"
     handle.textContent = "⠿"
     handle.draggable = true
-    handle.dataset.idx = i.toString()
-
+    
     Object.assign(handle.style, {
       position: "absolute",
       left: "-24px",
@@ -103,7 +265,6 @@ function addDragHandles(rows: HTMLElement[]) {
       opacity: "0"
     })
 
-    // 페이드인
     requestAnimationFrame(() => {
       handle.style.opacity = "1"
     })
@@ -117,102 +278,20 @@ function addDragHandles(rows: HTMLElement[]) {
       handle.style.background = "transparent"
     })
 
-    // 행 전체를 드래그 가능하게
     row.draggable = true
     row.style.transition = "background .15s, transform .15s"
-
-    // 드래그 시작 이벤트
-    handle.addEventListener("dragstart", (e) => {
-      _dragIdx = parseInt(handle.dataset.idx || "-1", 10)
-      _rows = rows
-      if (e.dataTransfer) {
-        e.dataTransfer.effectAllowed = "move"
-        e.dataTransfer.setDragImage(row, 30, row.offsetHeight / 2)
-      }
-      requestAnimationFrame(() => {
-        row.style.opacity = "0.4"
-      })
-    })
-
-    // 행에서도 dragstart (핸들이 아닌 곳에서 시작하면 취소)
-    row.addEventListener("dragstart", (e) => {
-      if (
-        !(e.target as HTMLElement).classList.contains("bwbr-drag-handle") &&
-        !(e.target as HTMLElement).closest(".bwbr-drag-handle")
-      ) {
-        e.preventDefault()
-      }
-    })
-
-    row.addEventListener("dragend", () => {
-      row.style.opacity = "1"
-      clearHighlights(rows)
-    })
-
-    row.addEventListener("dragover", (e) => {
-      e.preventDefault()
-      if (e.dataTransfer) e.dataTransfer.dropEffect = "move"
-      clearHighlights(rows)
-
-      const rect = row.getBoundingClientRect()
-      const isAbove = e.clientY < rect.top + rect.height / 2
-      row.style.borderTop = isAbove ? "2px solid #2196F3" : ""
-      row.style.borderBottom = isAbove ? "" : "2px solid #2196F3"
-    })
-
-    row.addEventListener("dragleave", () => {
-      row.style.borderTop = ""
-      row.style.borderBottom = ""
-    })
-
-    row.addEventListener("drop", (e) => {
-      e.preventDefault()
-      const dropIdx = parseInt(handle.dataset.idx || "-1", 10)
-      if (_dragIdx >= 0 && _dragIdx !== dropIdx && _rows === rows) {
-        reorder(rows, _dragIdx, dropIdx)
-      }
-      _dragIdx = -1
-      clearHighlights(rows)
-    })
 
     row.insertBefore(handle, row.firstChild)
   }
 }
 
-function clearHighlights(rows: HTMLElement[]) {
-  for (const r of rows) {
-    r.style.borderTop = ""
-    r.style.borderBottom = ""
-    r.style.background = ""
-  }
-}
-
-/** 행 배열에서 fromIdx → toIdx로 이동, 모든 input 값 재배치 */
-function reorder(rows: HTMLElement[], fromIdx: number, toIdx: number) {
-  // 1) 모든 행의 현재 값 읽기
-  const data = rows.map(readRow)
-
-  // 2) 배열 내 이동
-  const [item] = data.splice(fromIdx, 1)
-  data.splice(toIdx, 0, item)
-
-  // 3) 모든 행에 새 값 쓰기
-  for (let i = 0; i < rows.length; i++) {
-    writeRow(rows[i], data[i])
-  }
-
-  // 4) 시각 피드백
-  rows[toIdx].style.background = "rgba(33,150,243,0.15)"
-  setTimeout(() => {
-    rows[toIdx].style.background = ""
-  }, 400)
-}
-
 export function injectDragReorder(dlg: HTMLElement) {
+  setupDragEvents(dlg)
+  
   const pairs = [
     ["스테이터스", "ステータス"],
     ["매개변수", "パラメータ"],
-    ["스탠딩", "standing"]
+    ["스탠딩", "立ち絵"]
   ]
   for (const [ko, ja] of pairs) {
     let rows = getSectionRows(dlg, ko)
@@ -221,4 +300,20 @@ export function injectDragReorder(dlg: HTMLElement) {
       addDragHandles(rows)
     }
   }
+}
+
+export function observeDialogForReorder(dlg: HTMLElement) {
+  injectDragReorder(dlg)
+
+  let isInjecting = false
+  const obs = new MutationObserver(() => {
+    if (isInjecting) return
+    isInjecting = true
+    requestAnimationFrame(() => {
+      injectDragReorder(dlg)
+      isInjecting = false
+    })
+  })
+  
+  obs.observe(dlg, { childList: true, subtree: true })
 }
