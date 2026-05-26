@@ -26,6 +26,12 @@ export interface CcfoliaCharacter {
   commands?: string
   owner?: string
   faces: CcfoliaCharacterFace[]
+  externalUrl?: string
+  memo: string
+  color?: string
+  hideStatus: boolean
+  createdAt: number
+  updatedAt: number
   [key: string]: any
 }
 

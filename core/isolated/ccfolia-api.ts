@@ -66,7 +66,9 @@ export const ccf = {
         params?: Record<string, string>
       }
     ) => ccfoliaRPC<void>("characters.patch", namePart, updates),
-    delete: (charId: string) => ccfoliaRPC<void>("characters.delete", charId)
+    delete: (charId: string) => ccfoliaRPC<void>("characters.delete", charId),
+    create: (data?: any, sourceName?: string) => ccfoliaRPC<string>("characters.create", data, sourceName),
+    update: (charId: string, payload: any) => ccfoliaRPC<void>("characters.update", charId, payload)
   },
   getCharacters: (filterType: "all" | "active" | "mine" | "status" = "all") =>
     ccfoliaRPC<CcfoliaCharacter[]>("characters.getCharacters", filterType),
@@ -110,6 +112,15 @@ export const ccf = {
       params?: Record<string, string>
     }
   ) => ccfoliaRPC<void>("characters.patch", namePart, updates),
+
+  createCharacrer: async (data?: any) =>
+    ccfoliaRPC<void>("characters.create", data),
+
+  updateCharacter: async (id: string, payload: any) =>
+    ccfoliaRPC<void>("characters.update", id, payload),
+
+  deleteCharacter: async (id: string) =>
+    ccfoliaRPC<void>("characters.delete", id),
 
   // ccf.tokens
 

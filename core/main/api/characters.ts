@@ -35,50 +35,51 @@ export const characters = {
     }
   },
 
-  create: async (sourceName?: string) => {
+  create: async (data: any = {}) => {
     const { fsTools, db, roomId, store } = getServices()
-    const { setDoc, doc, collection } = fsTools
+    const { addDoc, setDoc, doc, collection } = fsTools
     const state = store.getState()
 
-    // 컬렉션 참조에서 새로운 ID 자동 생성
+    // 컬렉션 참조 생성
     const colRef = collection(db, "rooms", roomId, "characters")
-    // Firestore v9 방식: doc(colRef)를 호출하면 랜덤 ID를 가진 참조 생성
-    // 하지만 minified된 doc함수가 인자 1개를 지원하는지 불확실하므로,
-    // 안전하게 랜덤 ID를 직접 만들거나 기존 캐릭터를 복사함.
 
     // 1. 템플릿 준비
     let template: any = {
-      name: "New Character",
-      status: [{ label: "HP", value: 10, max: 10 }],
-      params: [{ label: "MEMO", value: "" }],
+      name: "",
+      status: [{ label: "HP", value: 0, max: 0 }],
+      params: [],
       active: true,
       secret: false,
       invisible: false,
       hideStatus: false,
+      memo: "",
+      externalUrl: "",
+      color: "#888888",
       owner: state.app.state.uid, // 내 캐릭터로 생성
+    }
+
+    template = {
+      ...template,
+      ...data,
       createdAt: Date.now(),
       updatedAt: Date.now()
     }
 
-    if (sourceName) {
-      const source = characters
-        .getCharacters("all")
-        .find((c: any) => c.name.includes(sourceName))
-      if (source) {
-        template = { ...source }
-        delete template._id // ID는 새로 따야 함
-        template.name = source.name + " (Copy)"
-        template.createdAt = Date.now()
-      }
-    }
+    // 2. addDoc을 사용하여 새 문서 생성 (ID 자동 부여)
+    const docRef = await addDoc(colRef, template)
+    console.log(`[API] 캐릭터 생성 완료: ${template.name}, ID: ${docRef.id}`)
 
-    // 2. 새 문서 생성 (ID는 setDoc이 아닌 doc()에서 생성해야 하지만, 여기선 임의 ID 생성 로직 사용)
-    // 코코포리아는 20자리 랜덤 문자열 ID를 사용함.
-    const newId = generateRandomId()
-    const newRef = doc(colRef, newId)
+    return docRef.id
+  },
 
-    await setDoc(newRef, template)
-    console.log(`[API] 캐릭터 생성 완료: ${template.name}`)
+  update: async (charId: string, payload: any) => {
+    const { fsTools, db, roomId } = getServices()
+    const { setDoc, doc, collection } = fsTools
+    const target = characters.getById(charId)
+    if (!target) throw new Error(`'${charId}' 캐릭터 없음`)
+    const ref = doc(collection(db, "rooms", roomId, "characters"), target._id)
+    await setDoc(ref, { ...payload, updatedAt: Date.now() }, { merge: true })
+    console.log(`[API] ${target.name} 업데이트 완료`)
   },
 
   /**
