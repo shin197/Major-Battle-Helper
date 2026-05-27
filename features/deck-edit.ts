@@ -2,7 +2,7 @@ import { ccf } from "~core/isolated/ccfolia-api"
 import { generateRandomId } from "~utils/utils"
 
 export async function injectDeckEditor(form: HTMLElement, deckId: string) {
-  if (form.querySelector("#bwbr-deck-editor")) return
+  if (form.querySelector("#mb-deck-editor")) return
 
   const deckData = await ccf.decks.getById(deckId)
   if (!deckData) return
@@ -13,7 +13,7 @@ export async function injectDeckEditor(form: HTMLElement, deckId: string) {
 
   // 전체 컨테이너 생성
   const container = document.createElement("div")
-  container.id = "bwbr-deck-editor"
+  container.id = "mb-deck-editor"
   Object.assign(container.style, {
     marginTop: "24px",
     paddingTop: "16px",

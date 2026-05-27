@@ -1,6 +1,6 @@
 import { getServices } from "../hijack"
 
-let _bwbrPickerActive = false
+let _pickerActive = false
 
 export const app = {
   /**
@@ -9,9 +9,9 @@ export const app = {
    */
   openImagePicker: async (): Promise<string | null> => {
     const { store } = getServices()
-    if (!store || _bwbrPickerActive) return null
-    
-    _bwbrPickerActive = true
+    if (!store || _pickerActive) return null
+
+    _pickerActive = true
     let _pickerGotResult = false
 
     return new Promise((resolve) => {
@@ -23,7 +23,7 @@ export const app = {
           ...appState,
           openRoomImageSelect: true,
           openRoomImageSelectDir: "item",
-          openRoomImageSelectTarget: "bwbr/ext"
+          openRoomImageSelectTarget: "mb/ext"
         }
       })
 
@@ -40,13 +40,13 @@ export const app = {
         } else {
           imgEl = target.querySelector(":scope > img") as HTMLImageElement
         }
-        
+
         if (!imgEl || !imgEl.src) return
 
         // UI 버튼 아이콘인지 검사 (실제 업로드된 파일 이미지여야 함)
         if (
-          imgEl.closest("button:not(.MuiButtonBase-root)") || 
-          imgEl.closest("header") || 
+          imgEl.closest("button:not(.MuiButtonBase-root)") ||
+          imgEl.closest("header") ||
           imgEl.closest('[role="tab"]')
         ) return
 
@@ -55,14 +55,14 @@ export const app = {
         _pickerGotResult = true
         _sendResult(imgEl.src)
       }
-      
+
       document.addEventListener("click", onDocClick, true) // capture phase
 
       // 3) Redux Store 감시 (피커 닫힘 감지)
       const unsub = store.subscribe(() => {
         const s = store.getState().app.state
-        if (!s.openRoomImageSelect && _bwbrPickerActive) {
-          _bwbrPickerActive = false
+        if (!s.openRoomImageSelect && _pickerActive) {
+          _pickerActive = false
           unsub()
           document.removeEventListener("click", onDocClick, true)
           // 아무 선택 없이 창이 닫힘 (취소)
@@ -74,9 +74,9 @@ export const app = {
 
       // 4) 타임아웃 
       const fallbackTimeout = setTimeout(() => {
-        if (_bwbrPickerActive) {
-          _bwbrPickerActive = false
-          try { unsub() } catch (e) {}
+        if (_pickerActive) {
+          _pickerActive = false
+          try { unsub() } catch (e) { }
           document.removeEventListener("click", onDocClick, true)
           if (!_pickerGotResult) _sendResult(null)
         }

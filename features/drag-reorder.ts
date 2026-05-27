@@ -61,11 +61,11 @@ function readRow(row: HTMLElement) {
 function writeRow(row: HTMLElement, data: { label: string; value?: string; max?: string; imgSrc?: string }) {
   const inputs = row.querySelectorAll("input")
   const imgs = row.querySelectorAll("img")
-  
+
   if (inputs[0]) setInputValue(inputs[0], data.label)
   if (inputs[1] && data.value !== undefined) setInputValue(inputs[1], data.value)
   if (inputs[2] && data.max !== undefined) setInputValue(inputs[2], data.max)
-  
+
   if (imgs[0] && data.imgSrc !== undefined) {
     imgs[0].src = data.imgSrc
   }
@@ -105,23 +105,23 @@ function getSectionTitleOfRow(row: HTMLElement): string {
 }
 
 function setupDragEvents(dlg: HTMLElement) {
-  if (dlg.dataset.bwbrDragEvents === "true") return
-  dlg.dataset.bwbrDragEvents = "true"
+  if (dlg.dataset.mbDragEvents === "true") return
+  dlg.dataset.mbDragEvents = "true"
 
   dlg.addEventListener("dragstart", (e) => {
     const target = e.target as HTMLElement
-    const handle = target.classList?.contains("bwbr-drag-handle") ? target : target.closest?.(".bwbr-drag-handle")
-    const row = target.closest?.("[data-bwbr-row='true']") as HTMLElement
-    
+    const handle = target.classList?.contains("mb-drag-handle") ? target : target.closest?.(".mb-drag-handle")
+    const row = target.closest?.("[data-mb-row='true']") as HTMLElement
+
     if (row && !handle) {
       e.preventDefault()
       return
     }
-    
+
     if (handle && row) {
       _dragRow = row
       _dragSectionTitle = getSectionTitleOfRow(row)
-      
+
       if (e.dataTransfer) {
         e.dataTransfer.effectAllowed = "move"
         e.dataTransfer.setDragImage(row, 30, row.offsetHeight / 2)
@@ -139,24 +139,24 @@ function setupDragEvents(dlg: HTMLElement) {
   dlg.addEventListener("dragover", (e) => {
     if (!_dragRow) return
     const target = e.target as HTMLElement
-    const row = target.closest?.("[data-bwbr-row='true']") as HTMLElement
-    
+    const row = target.closest?.("[data-mb-row='true']") as HTMLElement
+
     if (row) {
       const title = getSectionTitleOfRow(row)
       if (title !== _dragSectionTitle) return
-      
+
       e.preventDefault()
       if (e.dataTransfer) e.dataTransfer.dropEffect = "move"
-      
+
       const rect = row.getBoundingClientRect()
       const isAbove = e.clientY < rect.top + rect.height / 2
-      
+
       if (_lastOverRow !== row || _lastIsAbove !== isAbove) {
         if (_lastOverRow) {
           _lastOverRow.style.borderTop = ""
           _lastOverRow.style.borderBottom = ""
         }
-        
+
         let showLine = true
         if (row === _dragRow) {
           showLine = false
@@ -164,7 +164,7 @@ function setupDragEvents(dlg: HTMLElement) {
           const rows = getSectionRows(dlg, _dragSectionTitle)
           const fromIdx = rows.indexOf(_dragRow)
           const toIdx = rows.indexOf(row)
-          
+
           if (fromIdx >= 0 && toIdx >= 0) {
             if (toIdx === fromIdx + 1 && isAbove) showLine = false
             if (toIdx === fromIdx - 1 && !isAbove) showLine = false
@@ -178,7 +178,7 @@ function setupDragEvents(dlg: HTMLElement) {
           row.style.borderTop = ""
           row.style.borderBottom = ""
         }
-        
+
         _lastOverRow = row
         _lastIsAbove = isAbove
       }
@@ -188,17 +188,17 @@ function setupDragEvents(dlg: HTMLElement) {
   dlg.addEventListener("drop", (e) => {
     if (!_dragRow) return
     e.preventDefault()
-    
+
     const target = e.target as HTMLElement
-    const dropRow = target.closest?.("[data-bwbr-row='true']") as HTMLElement
-    
+    const dropRow = target.closest?.("[data-mb-row='true']") as HTMLElement
+
     if (dropRow && dropRow !== _dragRow) {
       const title = getSectionTitleOfRow(dropRow)
       if (title === _dragSectionTitle) {
         const rows = getSectionRows(dlg, _dragSectionTitle)
         const fromIdx = rows.indexOf(_dragRow)
         const toIdx = rows.indexOf(dropRow)
-        
+
         if (fromIdx >= 0 && toIdx >= 0) {
           let insertIdx = toIdx
           if (_lastIsAbove === false) {
@@ -207,14 +207,14 @@ function setupDragEvents(dlg: HTMLElement) {
           if (fromIdx < insertIdx) {
             insertIdx--
           }
-          
+
           if (fromIdx !== insertIdx) {
             reorder(rows, fromIdx, insertIdx)
           }
         }
       }
     }
-    
+
     cleanupDrag()
   })
 }
@@ -235,16 +235,16 @@ function cleanupDrag() {
 function addDragHandles(rows: HTMLElement[]) {
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i]
-    row.dataset.bwbrRow = "true"
-    
-    if (row.querySelector(".bwbr-drag-handle")) continue
+    row.dataset.mbRow = "true"
+
+    if (row.querySelector(".mb-drag-handle")) continue
 
     row.style.position = "relative"
     const handle = document.createElement("div")
-    handle.className = "bwbr-drag-handle"
+    handle.className = "mb-drag-handle"
     handle.textContent = "⠿"
     handle.draggable = true
-    
+
     Object.assign(handle.style, {
       position: "absolute",
       left: "-24px",
@@ -287,7 +287,7 @@ function addDragHandles(rows: HTMLElement[]) {
 
 export function injectDragReorder(dlg: HTMLElement) {
   setupDragEvents(dlg)
-  
+
   const pairs = [
     ["스테이터스", "ステータス"],
     ["매개변수", "パラメータ"],
@@ -314,6 +314,6 @@ export function observeDialogForReorder(dlg: HTMLElement) {
       isInjecting = false
     })
   })
-  
+
   obs.observe(dlg, { childList: true, subtree: true })
 }

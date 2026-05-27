@@ -34,7 +34,7 @@ export function initMenuActions() {
         const id = menuInfo.id
 
         if (type === "character-detail") {
-          console.log(`[BattleHelper] 캐릭터 세부 편집창 열림 감지 - ID: ${id}`)
+          // console.log(`[BattleHelper] 캐릭터 세부 편집창 열림 감지 - ID: ${id}`)
           const form = addedDialog.querySelector("form")
           observeDialogForReorder((form || addedDialog) as HTMLElement)
         } else if (type === "item-detail") {
@@ -42,7 +42,7 @@ export function initMenuActions() {
         } else if (type === "marker-detail") {
           console.log(`[BattleHelper] 마커 패널 세부 편집창 열림 감지 - ID: ${id}`)
         } else if (type === "deck-detail") {
-          console.log(`[BattleHelper] 덱 세부 편집창 열림 감지 - ID: ${id}`)
+          // console.log(`[BattleHelper] 덱 세부 편집창 열림 감지 - ID: ${id}`)
           const form = addedDialog.querySelector("form") || addedDialog
           injectDeckEditor(form as HTMLElement, id)
         }
