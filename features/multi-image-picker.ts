@@ -28,9 +28,19 @@ function getCharEditDialog() {
 function getPickerImages(picker: Element) {
   const out: HTMLImageElement[] = []
   for (const img of picker.querySelectorAll("img")) {
+    // 1. 외부 링크(실제 업로드된 이미지)만 허용
     if (!img.src || !img.src.startsWith("https://")) continue
-    if (img.closest("button") || img.closest("header") || img.closest('[role="tab"]')) continue
-    if (img.naturalWidth > 0 && img.naturalWidth < 40) continue
+    
+    // 2. UI 컨트롤용 아이콘 무시 (app.ts와 동일한 기준 적용)
+    if (
+      img.closest("button:not(.MuiButtonBase-root)") || 
+      img.closest("header") || 
+      img.closest('[role="tab"]')
+    ) continue
+    
+    // 3. (삭제됨) 기존의 naturalWidth < 40 필터링 제거. 
+    // TRPG 픽셀 아트(32x32, 16x16) 등의 작은 토큰이 무시되는 버그를 방지합니다.
+    
     out.push(img as HTMLImageElement)
   }
   return out
@@ -143,11 +153,15 @@ function enableMultiSelect(picker: Element) {
   applyMarkers(picker)
   injectAddButton(picker)
 
-  if (_pickerObs) _pickerObs.disconnect()
+  let rafId: number | null = null
   _pickerObs = new MutationObserver(() => {
     if (_active) {
-      applyMarkers(picker)
-      syncDeleteModeVisibility(picker)
+      if (rafId) cancelAnimationFrame(rafId)
+      rafId = requestAnimationFrame(() => {
+        applyMarkers(picker)
+        syncDeleteModeVisibility(picker)
+        rafId = null
+      })
     }
   })
   _pickerObs.observe(picker, { childList: true, subtree: true })
@@ -178,11 +192,24 @@ function syncDeleteModeVisibility(picker: Element) {
 }
 
 function applyMarkers(picker: Element) {
-  for (const img of getPickerImages(picker)) {
+  const imagesToProcess = getPickerImages(picker)
+  const tasks: Array<{ wrapper: HTMLElement, img: HTMLImageElement, isStatic: boolean }> = []
+
+  // Phase 1: Batch DOM Reads (레이아웃 스래싱 방지)
+  for (const img of imagesToProcess) {
     const wrapper = img.parentElement
     if (!wrapper || wrapper.querySelector(".mb-img-overlay")) continue
+    
+    tasks.push({
+      wrapper,
+      img,
+      isStatic: getComputedStyle(wrapper).position === "static"
+    })
+  }
 
-    if (getComputedStyle(wrapper).position === "static") {
+  // Phase 2: Batch DOM Writes
+  for (const { wrapper, img, isStatic } of tasks) {
+    if (isStatic) {
       wrapper.style.position = "relative"
     }
 
@@ -254,7 +281,11 @@ function applyMarkers(picker: Element) {
   syncDeleteModeVisibility(picker)
 }
 
-/** 툴바에 선택 추가 버튼 주입 */
+// Programmatic Picker State
+let _isProgrammaticMultiPicker = false
+let _programmaticResolve: ((items: Array<{ label: string; iconUrl: string }>) => void) | null = null
+
+/** 툴바에 선택 추가 버튼 주입 (Passive 모드 전용) */
 function injectBulkAddButton(picker: Element) {
   const toolbar = picker.querySelector(".MuiToolbar-root")
   if (!toolbar) {
@@ -312,6 +343,17 @@ async function onConfirm() {
     btn.textContent = "처리 중..."
   }
 
+  if (_isProgrammaticMultiPicker && _programmaticResolve) {
+    // Programmatic 모드: 결과 반환 및 창 닫기
+    _programmaticResolve(faces)
+    _programmaticResolve = null
+    _isProgrammaticMultiPicker = false
+    ccf.app.stateMutate({ openRoomImageSelect: false })
+    disableMultiSelect()
+    return
+  }
+
+  // Passive 모드 (캐릭터 표정 추가)
   try {
     const menuInfo = await ccf.menus.getOpenMenuInfo()
     if (!menuInfo || menuInfo.type !== "character-detail") {
@@ -341,7 +383,7 @@ async function onConfirm() {
         openRoomCharacter: true,
         openRoomCharacterId: charId
       })
-    }, 250)
+    }, 350)
   } catch (err: any) {
     console.error(TAG, "추가 실패:", err.message)
     window.alert("표정 추가 실패: " + err.message)
@@ -358,6 +400,31 @@ function fullCleanup() {
     _pickerObs = null
   }
   document.querySelectorAll(".mb-img-overlay, .mb-face-add-btn, .mb-bulk-add-btn").forEach((el) => el.remove())
+  
+  // Programmatic 모드에서 닫히면 빈 배열 반환
+  if (_isProgrammaticMultiPicker && _programmaticResolve) {
+    _programmaticResolve([])
+    _programmaticResolve = null
+    _isProgrammaticMultiPicker = false
+  }
+}
+
+/** 
+ * 다중 선택 이미지 피커를 프로그래매틱하게 호출합니다.
+ * @returns 선택된 이미지 객체 배열
+ */
+export async function openMultiImagePicker(): Promise<Array<{ label: string; iconUrl: string }>> {
+  return new Promise((resolve) => {
+    _isProgrammaticMultiPicker = true
+    _programmaticResolve = resolve
+    
+    // 코코포리아 네이티브 피커 호출
+    ccf.app.stateMutate({
+      openRoomImageSelect: true,
+      openRoomImageSelectDir: "item",
+      openRoomImageSelectTarget: "mb/ext/multi"
+    })
+  })
 }
 
 /** 메인 진입점 */
@@ -378,8 +445,7 @@ export function initFaceBulkAdd() {
       }
     }
 
-    // 다른 이미지 선택창 (예: 대표 이미지 클릭)일 경우 초기화
-    // 단, 닫기 버튼 등의 클릭으로 피커 안에서 일어나는 이벤트는 제외
+    // 다른 이미지 선택창일 경우 초기화
     if (!target.closest('.MuiDialog-paperWidthMd')) {
       _isFaceAddPickerOpen = false
     }
@@ -400,9 +466,14 @@ export function initFaceBulkAdd() {
     if (lastPickerState) return // 이미 처리됨
     lastPickerState = true
 
-    if (!getCharEditDialog()) return
+    // Programmatic 모드일 경우 즉시 활성화
+    if (_isProgrammaticMultiPicker) {
+      enableMultiSelect(picker)
+      return
+    }
 
-    // ★ 핵심: 스탠딩 탭에서 "추가" 버튼으로 열린 창일 때만 작동!
+    // Passive 모드 (캐릭터 편집창)
+    if (!getCharEditDialog()) return
     if (!_isFaceAddPickerOpen) return
 
     injectBulkAddButton(picker)

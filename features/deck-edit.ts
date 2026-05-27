@@ -1,5 +1,6 @@
 import { ccf } from "~core/isolated/ccfolia-api"
 import { generateRandomId } from "~utils/utils"
+import { openMultiImagePicker } from "./multi-image-picker"
 
 export async function injectDeckEditor(form: HTMLElement, deckId: string) {
   if (form.querySelector("#mb-deck-editor")) return
@@ -48,13 +49,20 @@ export async function injectDeckEditor(form: HTMLElement, deckId: string) {
   container.appendChild(headerToolbar)
 
   addBtn.addEventListener("click", async () => {
-    const newUrl = await ccf.app.openImagePicker()
-    if (newUrl) {
-      const newCardId = generateRandomId()
-      const newItem = { imageUrl: newUrl, memo: "" }
-      items[newCardId] = newItem
-
-      listContainer.appendChild(renderItem(newCardId, newItem))
+    const selectedImages = await openMultiImagePicker()
+    if (selectedImages && selectedImages.length > 0) {
+      for (const img of selectedImages) {
+        const newCardId = generateRandomId()
+        // 파일 이름(@표정이름)에서 골뱅이를 제거하고 메모로 사용
+        const memoName = img.label.startsWith("@") ? img.label.substring(1) : img.label
+        const newItem = { imageUrl: img.iconUrl, memo: memoName }
+        items[newCardId] = newItem
+        
+        // UI 즉시 추가 렌더링
+        listContainer.appendChild(renderItem(newCardId, newItem))
+      }
+      
+      // 파이어베이스 동기화
       await saveItems()
     }
   })

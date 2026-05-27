@@ -15,7 +15,7 @@ import { initContextMenuActions } from "~features/context-menu-actions"
 import { initMouseTracker } from "~utils/mouse-tracker"
 import { initExpressionButton } from "~features/expression-btn"
 import { initMenuActions } from "~features/menu-actions"
-import { initFaceBulkAdd } from "~features/face-bulk-add"
+import { initFaceBulkAdd } from "~features/multi-image-picker"
 
 import { initChatLogPager } from "../features/log-pager"
 import { initToastObserver } from "../utils/isolated/toast"
