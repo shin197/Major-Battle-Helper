@@ -87,5 +87,20 @@ export const app = {
         resolve(url)
       }
     })
+  },
+
+  /**
+   * Redux의 app.state(UI 상태)를 변경합니다.
+   * 예: { openRoomImageSelect: false, openRoomCharacter: false }
+   */
+  stateMutate: (updates: Record<string, any>) => {
+    const { store } = getServices()
+    if (!store) return
+
+    const currentState = store.getState().app.state
+    store.dispatch({
+      type: "app/state/seted",
+      payload: { ...currentState, ...updates }
+    })
   }
 }

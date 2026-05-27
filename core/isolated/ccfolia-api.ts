@@ -169,7 +169,8 @@ export const ccf = {
 
   // ccf.app
   app: {
-    openImagePicker: () => ccfoliaRPC<string | null>("app.openImagePicker")
+    openImagePicker: () => ccfoliaRPC<string | null>("app.openImagePicker"),
+    stateMutate: (updates: Record<string, any>) => ccfoliaRPC<void>("app.stateMutate", updates)
   },
 
   // ccf.messages

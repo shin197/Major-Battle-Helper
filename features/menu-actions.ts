@@ -34,7 +34,7 @@ export function initMenuActions() {
         const id = menuInfo.id
 
         if (type === "character-detail") {
-          // console.log(`[BattleHelper] 캐릭터 세부 편집창 열림 감지 - ID: ${id}`)
+          console.log(`[BattleHelper] 캐릭터 세부 편집창 열림 감지 - ID: ${id}`)
           const form = addedDialog.querySelector("form")
           observeDialogForReorder((form || addedDialog) as HTMLElement)
         } else if (type === "item-detail") {
