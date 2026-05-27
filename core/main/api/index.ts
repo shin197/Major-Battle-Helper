@@ -5,9 +5,11 @@ import { menus } from "./menu"
 import { messages } from "./messages"
 import { tokens } from "./tokens"
 import { decks } from "./decks"
+import { app } from "./app"
 
 export const buildAPI = () => {
   return {
+    app,
     getReduxState: () => {
       const { store } = getServices()
       return store.getState()

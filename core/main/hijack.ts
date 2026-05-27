@@ -138,10 +138,11 @@ function pickFirestoreExports(mod: any): null | {
   deleteDoc: Function
   writeBatch: Function
   addDoc: Function
+  updateDoc: Function
 } {
   if (!mod || typeof mod !== "object") return null
 
-  let setDoc, doc, collection, deleteDoc, writeBatch, addDoc
+  let setDoc, doc, collection, deleteDoc, writeBatch, addDoc, updateDoc
 
   // 1. 객체의 모든 속성을 순회하며 함수형태인 것들만 검사
   for (const key of Object.keys(mod)) {
@@ -156,11 +157,14 @@ function pickFirestoreExports(mod: any): null | {
         writeBatch = val
       } else if (fnStr.includes('"collection"') || fnName === "collection") {
         collection = val
+      } else if (fnStr.includes('"updateDoc"') || fnName === "updateDoc") {
+        updateDoc = val
       } else if (
         (fnStr.includes('"doc"') || fnName === "doc") &&
         !fnStr.includes('"setDoc"') &&
         !fnStr.includes('"addDoc"') &&
-        !fnStr.includes('"deleteDoc"')
+        !fnStr.includes('"deleteDoc"') &&
+        !fnStr.includes('"updateDoc"')
       ) {
         doc = val
       }
@@ -169,7 +173,7 @@ function pickFirestoreExports(mod: any): null | {
 
   for (const key of Object.keys(mod)) {
     const val = mod[key]
-    if (typeof val === "function" && val !== collection && val !== doc && val !== deleteDoc && val !== writeBatch) {
+    if (typeof val === "function" && val !== collection && val !== doc && val !== deleteDoc && val !== writeBatch && val !== updateDoc) {
       try {
         if (val.toString().includes('merge')) {
           setDoc = val
@@ -187,10 +191,11 @@ function pickFirestoreExports(mod: any): null | {
   deleteDoc = deleteDoc ?? mod.oe ?? mod.deleteDoc
   writeBatch = writeBatch ?? mod.qs ?? mod.writeBatch
   addDoc = addDoc ?? mod.addDoc
+  updateDoc = updateDoc ?? mod.updateDoc ?? mod.Fv // fallback for updateDoc may not be perfect, but we try
 
-  // updateDoc도 필수 요건에 추가
+  // updateDoc도 반환에 추가
   if (setDoc && doc && collection && deleteDoc && addDoc) {
-    return { setDoc, doc, collection, deleteDoc, writeBatch, addDoc }
+    return { setDoc, doc, collection, deleteDoc, writeBatch, addDoc, updateDoc }
   }
 
   return null
@@ -405,7 +410,7 @@ function pickAppActions(mod: any) {
       const fnStr = val.toString()
       // appStateMutate 관련 문자열 특징이 있다면 식별 (일단 export 키워드에 appStateMutate가 있을 확률이 높음)
       if (fnStr.includes("selectedObjects") && fnStr.includes("state")) {
-         // rough guess if minified
+        // rough guess if minified
       }
     }
   }

@@ -159,10 +159,17 @@ export const ccf = {
   },
   getOpenMenuInfo: () => ccfoliaRPC<any>("menus.getOpenMenuInfo"),
 
-  // ccf.decks
   decks: {
     create: (deckPayload: Record<string, any>, items: Array<any>) =>
-      ccfoliaRPC<string>("decks.create", deckPayload, items)
+      ccfoliaRPC<string>("decks.create", deckPayload, items),
+    getById: (deckId: string) => ccfoliaRPC<any>("decks.getById", deckId),
+    update: (deckId: string, updates: Record<string, any>) =>
+      ccfoliaRPC<void>("decks.update", deckId, updates)
+  },
+
+  // ccf.app
+  app: {
+    openImagePicker: () => ccfoliaRPC<string | null>("app.openImagePicker")
   },
 
   // ccf.messages

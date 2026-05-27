@@ -1,5 +1,6 @@
 import { ccf } from "~core/isolated/ccfolia-api"
 import { observeDialogForReorder } from "./drag-reorder"
+import { injectDeckEditor } from "./deck-edit"
 
 // 주로 세부 편집창(MUI Dialog 또는 Drawer 등)이 body의 자식으로 추가될 때 감지합니다.
 const EDIT_WINDOW_SELECTOR = ".MuiDialog-root, .MuiDrawer-root"
@@ -42,6 +43,8 @@ export function initMenuActions() {
           console.log(`[BattleHelper] 마커 패널 세부 편집창 열림 감지 - ID: ${id}`)
         } else if (type === "deck-detail") {
           console.log(`[BattleHelper] 덱 세부 편집창 열림 감지 - ID: ${id}`)
+          const form = addedDialog.querySelector("form") || addedDialog
+          injectDeckEditor(form as HTMLElement, id)
         }
       }, 50)
     }
