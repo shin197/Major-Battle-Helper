@@ -3,9 +3,9 @@ import { getOrFindAnchor } from "~utils/elements"
 import { ccf } from "~core/isolated/ccfolia-api"
 import { getCurrentCharacterName } from "~features/slot-shortcut"
 
-const BTN_ID = "ccf-helper-expression-btn"
+const BTN_ID = "ccf-helper-face-btn"
 
-export async function initExpressionButton() {
+export async function initFaceButton() {
   // 지속적으로 버튼 삽입 위치를 감시하는 Observer
   const observer = new MutationObserver(async () => {
     try {
@@ -52,7 +52,7 @@ export async function initExpressionButton() {
         e.stopPropagation()
 
         // 이미 드롭다운이 열려있다면 닫기
-        const existingDropdown = document.getElementById("ccf-helper-expression-dropdown")
+        const existingDropdown = document.getElementById("ccf-helper-face-dropdown")
         if (existingDropdown) {
           existingDropdown.remove()
           return
@@ -76,7 +76,7 @@ export async function initExpressionButton() {
 
         // 커스텀 드롭다운 컨테이너 생성
         const dropdown = document.createElement("div")
-        dropdown.id = "ccf-helper-expression-dropdown"
+        dropdown.id = "ccf-helper-face-dropdown"
         dropdown.style.position = "absolute"
         dropdown.style.zIndex = "9999"
         dropdown.style.backgroundColor = "#424242" // 다크테마 기준 (필요시 CSS 변수 등 활용)

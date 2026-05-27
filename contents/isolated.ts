@@ -13,7 +13,7 @@ import {
 } from "~utils/feature-manager"
 import { initContextMenuActions } from "~features/context-menu-actions"
 import { initMouseTracker } from "~utils/mouse-tracker"
-import { initExpressionButton } from "~features/expression-btn"
+import { initFaceButton } from "~features/face-btn"
 import { initMenuActions } from "~features/menu-actions"
 import { initFaceBulkAdd } from "~features/multi-image-picker"
 
@@ -48,7 +48,7 @@ const isolatedFeatures: FeatureDefinition[] = [
   { id: "clipboard", name: "커스텀 클립보드", init: initCustomClipboard },
   { id: "mouse-tracker", name: "마우스 추적기", init: initMouseTracker },
   { id: "alt-click", name: "이미지 돋보기", init: initImageMagnifier },
-  { id: "face-button", name: "표정 변경 버튼", init: initExpressionButton },
+  { id: "face-button", name: "표정 변경 버튼", init: initFaceButton },
   { id: "more-menu", name: "향상된 컨텍스트 액션", init: initContextMenuActions },
   { id: "more-menu", name: "세부 편집창 액션", init: initMenuActions },
   { id: "more-menu", name: "표정 일괄 추가", init: initFaceBulkAdd }
