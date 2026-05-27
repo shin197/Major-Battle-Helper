@@ -44,6 +44,18 @@ export interface CcfoliaMember {
   [key: string]: any
 }
 
+export interface CcfoliaDiceToken {
+  _id: string
+  faces: number
+  closed: boolean
+  value: number
+  name: string
+  owner: string
+  x: number
+  y: number
+  [key: string]: any
+}
+
 export type CcReq = {
   id: string
   type: "ccfolia:call"
@@ -68,6 +80,7 @@ declare global {
       raId?: number
       appActionsId?: number
       deckActionsId?: number
+      diceActionsId?: number
     }
   }
 }

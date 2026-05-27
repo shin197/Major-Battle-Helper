@@ -193,5 +193,16 @@ export const ccf = {
     getByDisplayName: (displayName: string) => ccfoliaRPC<any>("members.getByDisplayName", displayName),
     getByRole: (minRole: "owner" | "subowner" | "player" | "audience" | "denied") =>
       ccfoliaRPC<any[]>("members.getByRole", minRole)
+  },
+
+  // ccf.diceTokens
+  diceTokens: {
+    getAll: () => ccfoliaRPC<any[]>("diceTokens.getAll"),
+    create: (data: any) => ccfoliaRPC<void>("diceTokens.create", data),
+    delete: (diceId: string) => ccfoliaRPC<void>("diceTokens.delete", diceId),
+    update: (diceId: string, item: any) => ccfoliaRPC<void>("diceTokens.update", diceId, item),
+    updateAnnounce: (diceId: string, item: any) => ccfoliaRPC<void>("diceTokens.updateAnnounce", diceId, item),
+    roll: (diceId: string, options: { faces: number[], closed: boolean }) => ccfoliaRPC<void>("diceTokens.roll", diceId, options),
+    rollSilent: (diceId: string, options: { faces: number[], closed: boolean }) => ccfoliaRPC<void>("diceTokens.rollSilent", diceId, options)
   }
 }

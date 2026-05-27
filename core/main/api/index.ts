@@ -7,11 +7,13 @@ import { tokens } from "./tokens"
 import { decks } from "./decks"
 import { app } from "./app"
 import { members } from "./members"
+import { diceTokens } from "./dice-tokens"
 
 export const buildAPI = () => {
   return {
     app,
     members,
+    diceTokens,
     getReduxState: () => {
       const { store } = getServices()
       return store.getState()

@@ -56,6 +56,7 @@ export function getServices() {
   const roomActions = resolveRoomActions(req) // 👈 마커/룸 액션 탈취
   const appActions = resolveAppActions(req) // 👈 앱(App) 액션 탈취
   const deckActions = resolveDeckActions(req) // 👈 덱(Deck) 액션 탈취
+  const diceActions = resolveDiceActions(req) // 👈 주사위(Dice) 액션 탈취
 
   const state = store.getState()
   const roomId = state.app?.state?.roomId
@@ -74,6 +75,7 @@ export function getServices() {
     roomActions,
     appActions,
     deckActions,
+    diceActions,
     roomId,
     rc
   }
@@ -456,6 +458,51 @@ function pickDeckActions(mod: any) {
     if (typeof val === "function") {
       const fnStr = val.toString()
       if (fnStr.includes('"update-deck"') || fnStr.includes("createPlayingCards")) {
+        return mod
+      }
+    }
+  }
+  return null
+}
+
+function resolveDiceActions(req: any) {
+  window.__CCFOLIA_MOD_CACHE__ ??= {}
+
+  const cachedId = window.__CCFOLIA_MOD_CACHE__.diceActionsId
+  if (cachedId != null) {
+    try {
+      const mod = req(cachedId)
+      if (pickDiceActions(mod)) return mod
+    } catch { }
+  }
+
+  try {
+    const mod = req(67342)
+    if (pickDiceActions(mod)) {
+      window.__CCFOLIA_MOD_CACHE__.diceActionsId = 67342
+      return mod
+    }
+  } catch { }
+
+  const diceActionsId = findModuleIdByExportShape(req, pickDiceActions)
+  if (diceActionsId != null) {
+    window.__CCFOLIA_MOD_CACHE__.diceActionsId = diceActionsId
+    return req(diceActionsId)
+  }
+
+  return null
+}
+
+function pickDiceActions(mod: any) {
+  if (!mod || typeof mod !== "object") return null
+
+  if (typeof mod.addRoomDice === "function" || typeof mod.updateRoomDice === "function") return mod
+
+  for (const key of Object.keys(mod)) {
+    const val = mod[key]
+    if (typeof val === "function") {
+      const fnStr = val.toString()
+      if (fnStr.includes('"update-dice"') || fnStr.includes("updateRollRoomDice")) {
         return mod
       }
     }
