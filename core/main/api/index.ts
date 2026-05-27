@@ -6,10 +6,12 @@ import { messages } from "./messages"
 import { tokens } from "./tokens"
 import { decks } from "./decks"
 import { app } from "./app"
+import { members } from "./members"
 
 export const buildAPI = () => {
   return {
     app,
+    members,
     getReduxState: () => {
       const { store } = getServices()
       return store.getState()

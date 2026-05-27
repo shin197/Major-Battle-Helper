@@ -184,5 +184,14 @@ export const ccf = {
       ccfoliaRPC<void>("messages.sendMessageAsChar", text, charName, iconUrl, color),
     sendDiceAsChar: (notation: string, label: string, charName: string) =>
       ccfoliaRPC<void>("messages.sendDiceAsChar", notation, label, charName)
+  },
+
+  // ccf.members
+  members: {
+    getAll: () => ccfoliaRPC<any[]>("members.getAll"),
+    getById: (id: string) => ccfoliaRPC<any>("members.getById", id),
+    getByDisplayName: (displayName: string) => ccfoliaRPC<any>("members.getByDisplayName", displayName),
+    getByRole: (minRole: "owner" | "subowner" | "player" | "audience" | "denied") =>
+      ccfoliaRPC<any[]>("members.getByRole", minRole)
   }
 }

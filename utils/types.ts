@@ -35,6 +35,15 @@ export interface CcfoliaCharacter {
   [key: string]: any
 }
 
+export interface CcfoliaMember {
+  _id: string
+  displayName: string
+  photoUrl: string
+  role: string
+  isAnonymous: boolean
+  [key: string]: any
+}
+
 export type CcReq = {
   id: string
   type: "ccfolia:call"
