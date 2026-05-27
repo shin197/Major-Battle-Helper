@@ -1,5 +1,5 @@
 import { ccf } from "~core/isolated/ccfolia-api"
-import { observeDialogForReorder } from "./drag-reorder"
+import { injectCharacterEditFeatures } from "./character-edit"
 import { injectDeckEditor } from "./deck-edit"
 
 // 주로 세부 편집창(MUI Dialog 또는 Drawer 등)이 body의 자식으로 추가될 때 감지합니다.
@@ -35,8 +35,8 @@ export function initMenuActions() {
 
         if (type === "character-detail") {
           console.log(`[BattleHelper] 캐릭터 세부 편집창 열림 감지 - ID: ${id}`)
-          const form = addedDialog.querySelector("form")
-          observeDialogForReorder((form || addedDialog) as HTMLElement)
+          const form = addedDialog.querySelector("form") || addedDialog as HTMLElement
+          injectCharacterEditFeatures(form as HTMLElement, id)
         } else if (type === "item-detail") {
           console.log(`[BattleHelper] 스크린 토큰 세부 편집창 열림 감지 - ID: ${id}`)
         } else if (type === "marker-detail") {
