@@ -135,6 +135,7 @@ export const ccf = {
     ) => ccfoliaRPC("tokens.patchBulk", updates),
     create: (type: string, payload: any) =>
       ccfoliaRPC<string>("tokens.create", type, payload),
+    createRoomItem: (payload: any) => ccfoliaRPC<string>("tokens.createRoomItem", payload),
     delete: (tokenId: string) => ccfoliaRPC<void>("tokens.delete", tokenId),
     toggleInspector: () => ccfoliaRPC<void>("tokens.toggleInspector"),
     setSelectedObjects: (objects: Array<{ selectType: string; id: string }>) =>

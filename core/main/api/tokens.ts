@@ -339,6 +339,45 @@ export const tokens = {
     return newId
   },
 
+  /**
+   * RoomItem 직접 생성 (addDoc/setDoc 수동 호출)
+   */
+  createRoomItem: async (payload: Record<string, any>) => {
+    const { fsTools, db, roomId, store } = getServices()
+    const { setDoc, doc, collection } = fsTools
+    const state = store.getState()
+    const owner = state.app.state.uid
+
+    const newId = generateRandomId()
+
+    const roomItems = state.entities.roomItems?.entities || {}
+    const itemsArray = Object.values(roomItems) as any[]
+    const maxZ = itemsArray.reduce((max, item) => Math.max(max, item.z || 0), 0)
+    const maxOrder = itemsArray.reduce((max, item) => Math.max(max, item.order || 0), 0)
+
+    const baseTemplate = {
+      name: "",
+      locked: false,
+      width: 4,
+      height: 4,
+      x: -1,
+      y: -1,
+      z: maxZ,
+      order: maxOrder + 1,
+      owner,
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    }
+
+    const newPayload = { ...baseTemplate, ...payload }
+
+    const tokenRef = doc(collection(db, "rooms", roomId, "items"), newId)
+    await setDoc(tokenRef, newPayload)
+    console.log(`[API] roomItem(${newId}) 수동 생성 완료`)
+
+    return newId
+  },
+
   delete: async (tokenId: string) => {
     const { fsTools, db, roomId, store, roomItemActions, roomActions } =
       getServices()
