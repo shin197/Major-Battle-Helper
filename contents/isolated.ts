@@ -21,12 +21,14 @@ import { initChatLogPager } from "../features/log-pager"
 import { initToastObserver } from "../utils/isolated/toast"
 
 export const config: PlasmoCSConfig = {
-  matches: ["https://ccfolia.com/rooms/*"],
+  matches: ["https://ccfolia.com/*"],
   run_at: "document_idle",
   all_frames: true
 }
 
 const IS_MAJOR_BATTLE = process.env.PLASMO_PUBLIC_MAJOR_BATTLE === "true"
+
+import { initHomeHistory } from "~features/home-history"
 
 // 💡 켜고 끌 수 있는 기능들을 배열로 정리합니다.
 const isolatedFeatures: FeatureDefinition[] = [
@@ -51,7 +53,8 @@ const isolatedFeatures: FeatureDefinition[] = [
   { id: "face-button", name: "표정 변경 버튼", init: initFaceButton },
   { id: "more-menu", name: "향상된 컨텍스트 액션", init: initContextMenuActions },
   { id: "more-menu", name: "세부 편집창 액션", init: initMenuActions },
-  { id: "more-menu", name: "표정 일괄 추가", init: initFaceBulkAdd }
+  { id: "more-menu", name: "표정 일괄 추가", init: initFaceBulkAdd },
+  { id: "home-history", name: "홈 방문 기록", init: initHomeHistory, defaultEnabled: true }
 ]
 
 // 실행!

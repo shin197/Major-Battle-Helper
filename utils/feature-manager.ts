@@ -15,8 +15,8 @@ export interface FeatureDefinition {
 // 1. ISOLATED 환경용 런처 (스토리지 직접 접근 가능)
 // ==========================================
 export async function loadFeatures(features: FeatureDefinition[]) {
-  for (const feature of features) {
-    if (feature.condition && !feature.condition()) continue
+  const initPromises = features.map(async (feature) => {
+    if (feature.condition && !feature.condition()) return
 
     const isEnabled =
       (await storage.get<boolean>(`feature:${feature.id}`)) ??
@@ -24,7 +24,7 @@ export async function loadFeatures(features: FeatureDefinition[]) {
       true
     if (!isEnabled) {
       console.log(`⏭️ [Feature] '${feature.name}' 비활성화됨`)
-      continue
+      return
     }
 
     try {
@@ -32,7 +32,8 @@ export async function loadFeatures(features: FeatureDefinition[]) {
     } catch (e) {
       console.error(`❌ [Feature] '${feature.name}' 초기화 실패:`, e)
     }
-  }
+  })
+  await Promise.all(initPromises)
 }
 
 // ==========================================
@@ -80,13 +81,13 @@ export function loadMainFeatures(features: FeatureDefinition[]) {
 
       const settings = event.data.settings
 
-      for (const feature of features) {
-        if (feature.condition && !feature.condition()) continue
+      const initPromises = features.map(async (feature) => {
+        if (feature.condition && !feature.condition()) return
 
         const isEnabled = settings[feature.id]
         if (!isEnabled) {
           console.log(`⏭️ [MAIN Feature] '${feature.name}' 비활성화됨`)
-          continue
+          return
         }
 
         try {
@@ -94,7 +95,8 @@ export function loadMainFeatures(features: FeatureDefinition[]) {
         } catch (e) {
           console.error(`❌ [MAIN Feature] '${feature.name}' 초기화 실패:`, e)
         }
-      }
+      })
+      await Promise.all(initPromises)
     }
   }
 

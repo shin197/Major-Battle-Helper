@@ -362,6 +362,14 @@ export default function IndexPopup() {
           }
           onToggle={handleSettingsChange}
         />
+        <FeatureToggle
+          id="home-history"
+          label="홈 방문 기록"
+          description={
+            "코코포리아 홈(/home)에 최근 방문했던 방 목록을 표시합니다."
+          }
+          onToggle={handleSettingsChange}
+        />
       </div>
 
       {hasChanged && (
