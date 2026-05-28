@@ -29,7 +29,7 @@ export async function injectDeckEditor(form: HTMLElement, deckId: string) {
   headerToolbar.className = "MuiToolbar-root MuiToolbar-dense css-mjywep"
 
   const headerTitle = document.createElement("h6")
-  headerTitle.className = "MuiTypography-root MuiTypography-subtitle2 sc-eQxmfS lhqHqS css-hf8y9a"
+  headerTitle.className = "MuiTypography-root MuiTypography-subtitle2"
   headerTitle.textContent = "카드 목록"
   headerTitle.style.flexGrow = "1"
   headerToolbar.appendChild(headerTitle)
@@ -150,21 +150,27 @@ export async function injectDeckEditor(form: HTMLElement, deckId: string) {
     // 2. 텍스트 입력 (메모/이름) - MUI 의존성 없는 커스텀 스타일
     const inputWrapper = document.createElement("div")
     Object.assign(inputWrapper.style, {
-      position: "relative",
+      display: "flex",
+      flexDirection: "column",
       flexGrow: "1",
-      marginTop: "16px",
+      marginTop: "8px",
       marginBottom: "8px"
     })
 
-    // 네이티브 스타일 라벨
+    const headerWrap = document.createElement("div")
+    Object.assign(headerWrap.style, {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "flex-end",
+      marginBottom: "4px"
+    })
+
     const inputLabel = document.createElement("label")
     Object.assign(inputLabel.style, {
-      position: "absolute",
-      top: "-18px",
-      left: "0",
-      fontSize: "12px",
+      fontSize: "14px",
       color: "rgba(255, 255, 255, 0.7)",
-      transition: "color 0.2s"
+      transition: "color 0.2s",
+      marginBottom: "4px"
     })
     inputLabel.textContent = "메모"
 
@@ -189,9 +195,9 @@ export async function injectDeckEditor(form: HTMLElement, deckId: string) {
       fontSize: "1rem",
       fontFamily: "inherit"
     })
-    input.placeholder = "메모"
     input.value = itemData.memo || ""
-
+    input.name = "memo"
+    input.className = "MuiInputBase-input MuiFilledInput-input MuiInputBase-inputMultiline css-th3b71"
     // Focus 애니메이션
     input.addEventListener("focus", () => {
       inputLabel.style.color = "rgb(33, 150, 243)"
@@ -211,10 +217,7 @@ export async function injectDeckEditor(form: HTMLElement, deckId: string) {
       await saveItems()
     })
 
-    inputBase.appendChild(input)
-    inputWrapper.appendChild(inputLabel)
-    inputWrapper.appendChild(inputBase)
-    row.appendChild(inputWrapper)
+    // (inputWrapper 하위 요소 조립은 버튼들을 먼저 만든 뒤 아래에서 처리합니다)
 
     // 3. 공개 꺼내기 버튼
     const extractPubBtn = document.createElement("button")
@@ -222,7 +225,7 @@ export async function injectDeckEditor(form: HTMLElement, deckId: string) {
     extractPubBtn.className = "MuiButtonBase-root MuiIconButton-root MuiIconButton-sizeSmall css-xfvph6"
     extractPubBtn.title = "공개 꺼내기"
     extractPubBtn.innerHTML = `
-      <svg class="MuiSvgIcon-root MuiSvgIcon-fontSizeMedium css-vubbuv" focusable="false" aria-hidden="true" viewBox="0 0 24 24" data-testid="VisibilityIcon">
+      <svg class="MuiSvgIcon-root MuiSvgIcon-fontSizeSmall css-vubbuv" focusable="false" aria-hidden="true" viewBox="0 0 24 24" data-testid="VisibilityIcon" style="font-size: 20px;">
         <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"></path>
       </svg>
       <span class="MuiTouchRipple-root css-w0pj6f"></span>
@@ -243,7 +246,7 @@ export async function injectDeckEditor(form: HTMLElement, deckId: string) {
     extractPrivBtn.className = "MuiButtonBase-root MuiIconButton-root MuiIconButton-sizeSmall css-xfvph6"
     extractPrivBtn.title = "비공개 꺼내기"
     extractPrivBtn.innerHTML = `
-      <svg class="MuiSvgIcon-root MuiSvgIcon-fontSizeMedium css-vubbuv" focusable="false" aria-hidden="true" viewBox="0 0 24 24" data-testid="VisibilityOffIcon">
+      <svg class="MuiSvgIcon-root MuiSvgIcon-fontSizeSmall css-vubbuv" focusable="false" aria-hidden="true" viewBox="0 0 24 24" data-testid="VisibilityOffIcon" style="font-size: 20px;">
         <path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"></path>
       </svg>
       <span class="MuiTouchRipple-root css-w0pj6f"></span>
@@ -264,7 +267,7 @@ export async function injectDeckEditor(form: HTMLElement, deckId: string) {
     delBtn.className = "MuiButtonBase-root MuiIconButton-root MuiIconButton-sizeSmall css-xfvph6"
     delBtn.title = "삭제"
     delBtn.innerHTML = `
-      <svg class="MuiSvgIcon-root MuiSvgIcon-fontSizeMedium css-vubbuv" focusable="false" aria-hidden="true" viewBox="0 0 24 24" data-testid="DeleteIcon">
+      <svg class="MuiSvgIcon-root MuiSvgIcon-fontSizeSmall css-vubbuv" focusable="false" aria-hidden="true" viewBox="0 0 24 24" data-testid="DeleteIcon" style="font-size: 20px;">
         <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"></path>
       </svg>
       <span class="MuiTouchRipple-root css-w0pj6f"></span>
@@ -277,12 +280,19 @@ export async function injectDeckEditor(form: HTMLElement, deckId: string) {
 
     const actionsWrap = document.createElement("div")
     actionsWrap.style.display = "flex"
-    actionsWrap.style.gap = "4px"
+    actionsWrap.style.gap = "2px"
     actionsWrap.appendChild(extractPubBtn)
     actionsWrap.appendChild(extractPrivBtn)
     actionsWrap.appendChild(delBtn)
 
-    row.appendChild(actionsWrap)
+    headerWrap.appendChild(inputLabel)
+    headerWrap.appendChild(actionsWrap)
+
+    inputBase.appendChild(input)
+
+    inputWrapper.appendChild(headerWrap)
+    inputWrapper.appendChild(inputBase)
+    row.appendChild(inputWrapper)
 
     return row
   }
