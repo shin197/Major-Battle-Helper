@@ -71,7 +71,9 @@ const addGlobalStyle = () => {
   .bulk-drag-ghost.is-fallback{
     border:1px dashed rgba(0,0,0,0.35); background: rgba(0,0,0,0.06); box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   }
-  [${SELECTED_ATTR}="true"][data-bulk-locked]{ outline: 2px dashed #ff6a6a !important; outline-offset: 2px; }
+  [${SELECTED_ATTR}="true"][data-bulk-locked],
+  [${SELECTED_ATTR}="true"][aria-disabled="true"],
+  [${SELECTED_ATTR}="true"]:has([aria-disabled="true"]) { outline: 2px dashed #ff6a6a !important; outline-offset: 2px; }
 `
   document.head.appendChild(style)
 }

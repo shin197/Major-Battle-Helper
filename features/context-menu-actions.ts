@@ -182,7 +182,7 @@ async function injectContextMenuItems(paper: HTMLElement) {
     }).filter(obj => obj._type)
 
     const allTokens = await ccf.tokens.getAll()
-    const selectedTokensData = validTokensInfo.map(info => allTokens.find(t => t.id === info.id)).filter(Boolean)
+    const selectedTokensData = validTokensInfo.map(info => allTokens.find(t => t.id === info.id || t._id === info.id)).filter(Boolean)
 
     // 하나라도 freezed가 false(또는 undefined)라면 "크기 고정" 버튼
     // 모두 freezed가 true라면 "크기 고정 해제" 버튼
@@ -202,32 +202,15 @@ async function injectContextMenuItems(paper: HTMLElement) {
           await ccf.tokens.patchBulk(updates)
           showToast(`✅ ${updates.length}개의 토큰을 ${labelText}했습니다.`)
 
-          // 위치 고정(locked)을 변경했을 때 DOM 속성 토글 및 선택 유지(재선택)
+          // 위치 고정(locked)을 변경했을 때 코코포리아가 선택을 해제하는 것을 방지하기 위해 재선택
           if (propName === "locked") {
-            // DOM 테두리 색상 즉각 토글
-            validTokensInfo.forEach(obj => {
-              // DOM 상에서 해당 id를 포함하는 요소를 찾음
-              const el = Array.from(document.querySelectorAll('[data-bulk-selected="true"]'))
-                .find(node => {
-                  const domId = (node as HTMLElement).dataset.bulkId || (node.querySelector("div[id]")?.id)
-                  return domId && (domId.includes(obj.id) || obj.id.includes(domId))
-                }) as HTMLElement
-              if (el) {
-                if (newState) el.setAttribute("data-bulk-locked", "")
-                else el.removeAttribute("data-bulk-locked")
-              }
-            })
-
-            // 잠금 설정(true)시 코코포리아가 선택을 해제하는 것을 방지하기 위해 재선택
-            if (newState) {
-              const objectsToSelect = validTokensInfo.map(obj => ({
-                selectType: obj.selectType,
-                id: obj.id
-              }))
-              setTimeout(() => {
-                ccf.setSelectedObjects(objectsToSelect).catch(() => { })
-              }, 50)
-            }
+            const objectsToSelect = validTokensInfo.map(obj => ({
+              selectType: obj.selectType,
+              id: obj.id
+            }))
+            setTimeout(() => {
+              ccf.setSelectedObjects(objectsToSelect).catch(() => { })
+            }, 50)
           }
         }
       } catch (err) {
