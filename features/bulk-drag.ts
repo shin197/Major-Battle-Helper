@@ -32,14 +32,11 @@ type SelectMode = "replace" | "add" | "subtract"
 const selectPanel = (p: HTMLElement) => {
   selected.add(p)
   p.setAttribute(SELECTED_ATTR, "true")
-  if (isPanelLocked(p)) p.setAttribute("data-bulk-locked", "")
-  else p.removeAttribute("data-bulk-locked")
 }
 
 const deselectPanel = (p: HTMLElement) => {
   selected.delete(p)
   p.setAttribute(SELECTED_ATTR, "false")
-  p.removeAttribute("data-bulk-locked")
 }
 
 const isEventInsideSelectionArea = (e: Event): boolean => {
@@ -71,7 +68,6 @@ const addGlobalStyle = () => {
   .bulk-drag-ghost.is-fallback{
     border:1px dashed rgba(0,0,0,0.35); background: rgba(0,0,0,0.06); box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   }
-  [${SELECTED_ATTR}="true"][data-bulk-locked],
   [${SELECTED_ATTR}="true"][aria-disabled="true"],
   [${SELECTED_ATTR}="true"]:has([aria-disabled="true"]) { outline: 2px dashed #ff6a6a !important; outline-offset: 2px; }
 `
@@ -151,8 +147,6 @@ const syncReduxSelection = async () => {
 const updateSelectionByRect = (rect: DOMRect, mode: SelectMode = "replace") => {
   getPanels().forEach((p) => {
     const hit = intersects(rect, p.getBoundingClientRect())
-    if (isPanelLocked(p)) p.setAttribute("data-bulk-locked", "")
-    else p.removeAttribute("data-bulk-locked")
 
     if (mode === "replace") {
       if (hit) {
@@ -171,7 +165,6 @@ const updateSelectionByRect = (rect: DOMRect, mode: SelectMode = "replace") => {
 const clearSelection = (sync = true) => {
   selected.forEach((el) => {
     el.setAttribute(SELECTED_ATTR, "false")
-    el.removeAttribute("data-bulk-locked")
   })
   selected.clear()
   if (sync) void syncReduxSelection()
