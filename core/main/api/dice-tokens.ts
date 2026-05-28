@@ -9,6 +9,7 @@ export const diceTokens = {
     const state = store.getState()
     // Try roomDiceTokens or roomDices based on typical ccfolia state shapes
     const roomDice = state.entities?.roomDices?.entities
+    // console.log(roomDice)
     if (!roomDice) return []
     return Object.values(roomDice)
   },
@@ -71,18 +72,34 @@ export const diceTokens = {
     if (!diceActions || !diceActions.updateCurrentRoomDice) throw new Error("diceActions 모듈을 찾을 수 없습니다.")
     return store.dispatch(diceActions.updateCurrentRoomDice(item, diceId))
   },
-  roll: async (diceId: string, options: { faces: number[], closed: boolean }) => {
+  roll: async (diceId: string) => {
     const { store, diceActions } = getServices()
     if (!diceActions || !diceActions.updateRollRoomDice) throw new Error("diceActions 모듈을 찾을 수 없습니다.")
+    const currentDice = diceTokens.get(diceId)
+    // console.log(currentDice)
+    const options = { faces: currentDice.faces, closed: currentDice.closed }
     return store.dispatch(diceActions.updateRollRoomDice(diceId, options))
   },
   rollSilent: async (diceId: string) => {
     const { store, diceActions } = getServices()
     if (!diceActions || !diceActions.updateRollRoomDice) throw new Error("diceActions 모듈을 찾을 수 없습니다.")
-    const currentDice = diceActions.getRoomDice(diceId)
+    const currentDice = diceTokens.get(diceId)
+    if (!currentDice) throw new Error("주사위 토큰을 찾을 수 없습니다.")
     const item = {
       ...currentDice,
       value: Math.floor(Math.random() * currentDice.faces) + 1,
+    }
+    return store.dispatch(diceActions.updateRoomDice(diceId, item))
+  },
+  rollSilentWithOptions: async (diceId: string, options: { faces: number, closed: boolean }) => {
+    const { store, diceActions } = getServices()
+    if (!diceActions || !diceActions.updateRollRoomDice) throw new Error("diceActions 모듈을 찾을 수 없습니다.")
+    const currentDice = diceTokens.get(diceId)
+    if (!currentDice) throw new Error("주사위 토큰을 찾을 수 없습니다.")
+    const item = {
+      ...currentDice,
+      ...options,
+      value: Math.floor(Math.random() * options.faces) + 1,
     }
     return store.dispatch(diceActions.updateRoomDice(diceId, item))
   }

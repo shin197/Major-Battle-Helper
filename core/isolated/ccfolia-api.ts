@@ -202,7 +202,8 @@ export const ccf = {
     delete: (diceId: string) => ccfoliaRPC<void>("diceTokens.delete", diceId),
     update: (diceId: string, item: any) => ccfoliaRPC<void>("diceTokens.update", diceId, item),
     updateAnnounce: (diceId: string, item: any) => ccfoliaRPC<void>("diceTokens.updateAnnounce", diceId, item),
-    roll: (diceId: string, options: { faces: number[], closed: boolean }) => ccfoliaRPC<void>("diceTokens.roll", diceId, options),
-    rollSilent: (diceId: string, options: { faces: number[], closed: boolean }) => ccfoliaRPC<void>("diceTokens.rollSilent", diceId, options)
+    roll: (diceId: string) => ccfoliaRPC<void>("diceTokens.roll", diceId),
+    rollSilent: (diceId: string) => ccfoliaRPC<void>("diceTokens.rollSilent", diceId),
+    rollSilentWithOptions: (diceId: string, options: { faces: number, closed: boolean }) => ccfoliaRPC<void>("diceTokens.rollSilentWithOptions", diceId, options)
   }
 }
