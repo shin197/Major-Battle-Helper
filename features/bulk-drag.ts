@@ -619,7 +619,12 @@ const onKeyDown = (e: KeyboardEvent) => {
           try {
             if (targetType === "roomCharacter") continue
 
-            if (ccf.tokens.delete) {
+            if (targetType === "roomDice") {
+              if (ccf.diceTokens && ccf.diceTokens.delete) {
+                await ccf.diceTokens.delete(targetId)
+                deletedCount++
+              }
+            } else if (ccf.tokens.delete) {
               await ccf.tokens.delete(targetId)
               deletedCount++
             } else {
@@ -858,7 +863,8 @@ const onKeyDown = (e: KeyboardEvent) => {
           if (
             tokenData._type === "roomItem" ||
             tokenData._type === "roomMarker" ||
-            tokenData._type === "roomDeck"
+            tokenData._type === "roomDeck" ||
+            tokenData._type === "roomDice"
           ) {
             bundleItems.push({
               kind: tokenData._type,

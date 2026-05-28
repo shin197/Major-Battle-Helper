@@ -50,8 +50,12 @@ export function initCustomClipboard() {
               // 이전에 구현하신 ccf.tokens.create 호출
               // 주의: roomCharacter는 파라미터 구조가 복잡할 수 있으므로,
               // 우선 roomItem, roomMarker 등 지원하는 타입만 생성되도록 합니다.
-              if (item.kind === "roomItem" || item.kind === "roomMarker") {
-                await ccf.tokens.create(item.kind as any, newPayload)
+              if (item.kind === "roomItem" || item.kind === "roomMarker" || item.kind === "roomDice") {
+                if (item.kind === "roomDice") {
+                  await ccf.diceTokens.create(newPayload)
+                } else {
+                  await ccf.tokens.create(item.kind as any, newPayload)
+                }
                 successCount++
               } else if (item.kind === "roomDeck") {
                 // 덱 내부의 카드 데이터를 ccf.decks.create 시그니처에 맞게 배열로 추출
@@ -98,8 +102,11 @@ export function initCustomClipboard() {
             parsed.locked = false
 
             try {
-              // 작성해두신 ccf.tokens.create API를 호출하여 토큰 생성
-              await ccf.tokens.create(parsed.kind as any, payload)
+              if (parsed.kind === "roomDice") {
+                await ccf.diceTokens.create(payload)
+              } else {
+                await ccf.tokens.create(parsed.kind as any, payload)
+              }
               showToast(`✅ 토큰 붙여넣기 완료!`)
             } catch (createErr) {
               // console.error("[BattleHelper] 토큰 생성 중 에러:", createErr)
