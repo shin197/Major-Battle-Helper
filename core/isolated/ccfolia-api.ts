@@ -164,7 +164,9 @@ export const ccf = {
       ccfoliaRPC<string>("decks.create", deckPayload, items),
     getById: (deckId: string) => ccfoliaRPC<any>("decks.getById", deckId),
     update: (deckId: string, updates: Record<string, any>) =>
-      ccfoliaRPC<void>("decks.update", deckId, updates)
+      ccfoliaRPC<void>("decks.update", deckId, updates),
+    extractCard: (deckId: string, itemId: string, isClosed: boolean) =>
+      ccfoliaRPC<string>("decks.extractCard", deckId, itemId, isClosed)
   },
 
   // ccf.app

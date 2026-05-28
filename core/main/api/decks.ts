@@ -1,5 +1,6 @@
 import { getServices } from "../hijack"
 import { generateRandomId } from "~utils/utils"
+import { tokens } from "./tokens"
 
 export const decks = {
   create: async (deckPayload: Record<string, any>, items: Array<any>) => {
@@ -38,6 +39,63 @@ export const decks = {
     console.log(`[API] 덱(${docRef.id}) 커스텀 생성 완료 (카드 수: ${items.length})`)
 
     return docRef.id
+  },
+
+  extractCard: async (deckId: string, itemId: string, isClosed: boolean) => {
+    const { fsTools, db, roomId, store, deckActions, selectors } = getServices()
+    const { addDoc, collection, updateDoc, doc, setDoc } = fsTools
+    const state = store.getState()
+    const uid = state.app?.user?.uid || "NONAME"
+    const name = state.app?.state?.roomChatName || "NONAME"
+    const deck = state.entities?.roomDecks?.entities?.[deckId]
+
+    if (!deck || !deck.items || !deck.items[itemId]) {
+      throw new Error(`[API] 덱 또는 카드를 찾을 수 없습니다: ${deckId}/${itemId}`)
+    }
+
+    const cardData = deck.items[itemId]
+
+    // 1. 새 RoomItem 생성
+    const newItemPayload = {
+      ...cardData,
+      coverImageUrl: deck.coverImageUrl,
+      imageUrl: cardData.imageUrl,
+      memo: cardData.memo,
+      x: deck.x + 1,
+      y: deck.y + 1,
+      z: deck.zIndex,
+      width: deck.width,
+      height: deck.height,
+      deckId: deckId,
+      closed: isClosed,
+      freezed: deck.freezed,
+      owner: isClosed ? uid : null,
+      ownerName: isClosed ? name : null,
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    }
+
+    // const newItemRef = await addDoc(collection(db, "rooms", roomId, "items"), newItemPayload)
+    // console.log(`[API] 카드 추출 성공 -> 새 아이템 ID: ${newItemRef.id}`)
+    await tokens.create("roomItem", newItemPayload)
+
+    // 2. 덱에서 해당 카드 삭제 (객체 복제 후 삭제 처리)
+    const newItems = { ...deck.items }
+    delete newItems[itemId]
+
+    const deckRef = doc(db, "rooms", roomId, "decks", deckId)
+    if (updateDoc) {
+      try {
+        await updateDoc(deckRef, { items: newItems })
+      } catch (e) {
+        await setDoc(deckRef, { ...deck, items: newItems })
+      }
+    } else {
+      await setDoc(deckRef, { ...deck, items: newItems })
+    }
+
+    // return newItemRef.id
+    return null
   },
 
   getById: (deckId: string) => {

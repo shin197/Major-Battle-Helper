@@ -57,11 +57,11 @@ export async function injectDeckEditor(form: HTMLElement, deckId: string) {
         const memoName = img.label.startsWith("@") ? img.label.substring(1) : img.label
         const newItem = { imageUrl: img.iconUrl, memo: memoName }
         items[newCardId] = newItem
-        
+
         // UI 즉시 추가 렌더링
         listContainer.appendChild(renderItem(newCardId, newItem))
       }
-      
+
       // 파이어베이스 동기화
       await saveItems()
     }
@@ -166,7 +166,7 @@ export async function injectDeckEditor(form: HTMLElement, deckId: string) {
       color: "rgba(255, 255, 255, 0.7)",
       transition: "color 0.2s"
     })
-    inputLabel.textContent = "카드 이름"
+    inputLabel.textContent = "메모"
 
     const inputBase = document.createElement("div")
     Object.assign(inputBase.style, {
@@ -177,8 +177,8 @@ export async function injectDeckEditor(form: HTMLElement, deckId: string) {
       transition: "border-bottom 0.2s"
     })
 
-    const input = document.createElement("input")
-    input.type = "text"
+    const input = document.createElement("textarea")
+    input.rows = 4
     Object.assign(input.style, {
       width: "100%",
       background: "none",
@@ -216,10 +216,53 @@ export async function injectDeckEditor(form: HTMLElement, deckId: string) {
     inputWrapper.appendChild(inputBase)
     row.appendChild(inputWrapper)
 
-    // 3. 삭제 버튼
+    // 3. 공개 꺼내기 버튼
+    const extractPubBtn = document.createElement("button")
+    extractPubBtn.type = "button"
+    extractPubBtn.className = "MuiButtonBase-root MuiIconButton-root MuiIconButton-sizeSmall css-xfvph6"
+    extractPubBtn.title = "공개 꺼내기"
+    extractPubBtn.innerHTML = `
+      <svg class="MuiSvgIcon-root MuiSvgIcon-fontSizeMedium css-vubbuv" focusable="false" aria-hidden="true" viewBox="0 0 24 24" data-testid="VisibilityIcon">
+        <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"></path>
+      </svg>
+      <span class="MuiTouchRipple-root css-w0pj6f"></span>
+    `
+    extractPubBtn.addEventListener("click", async () => {
+      try {
+        await ccf.decks.extractCard(deckId, cardId, false)
+        delete items[cardId]
+        row.remove()
+      } catch (err) {
+        console.error("공개 꺼내기 실패", err)
+      }
+    })
+
+    // 4. 비공개 꺼내기 버튼
+    const extractPrivBtn = document.createElement("button")
+    extractPrivBtn.type = "button"
+    extractPrivBtn.className = "MuiButtonBase-root MuiIconButton-root MuiIconButton-sizeSmall css-xfvph6"
+    extractPrivBtn.title = "비공개 꺼내기"
+    extractPrivBtn.innerHTML = `
+      <svg class="MuiSvgIcon-root MuiSvgIcon-fontSizeMedium css-vubbuv" focusable="false" aria-hidden="true" viewBox="0 0 24 24" data-testid="VisibilityOffIcon">
+        <path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"></path>
+      </svg>
+      <span class="MuiTouchRipple-root css-w0pj6f"></span>
+    `
+    extractPrivBtn.addEventListener("click", async () => {
+      try {
+        await ccf.decks.extractCard(deckId, cardId, true)
+        delete items[cardId]
+        row.remove()
+      } catch (err) {
+        console.error("비공개 꺼내기 실패", err)
+      }
+    })
+
+    // 5. 삭제 버튼
     const delBtn = document.createElement("button")
     delBtn.type = "button"
     delBtn.className = "MuiButtonBase-root MuiIconButton-root MuiIconButton-sizeSmall css-xfvph6"
+    delBtn.title = "삭제"
     delBtn.innerHTML = `
       <svg class="MuiSvgIcon-root MuiSvgIcon-fontSizeMedium css-vubbuv" focusable="false" aria-hidden="true" viewBox="0 0 24 24" data-testid="DeleteIcon">
         <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"></path>
@@ -232,7 +275,14 @@ export async function injectDeckEditor(form: HTMLElement, deckId: string) {
       await saveItems()
     })
 
-    row.appendChild(delBtn)
+    const actionsWrap = document.createElement("div")
+    actionsWrap.style.display = "flex"
+    actionsWrap.style.gap = "4px"
+    actionsWrap.appendChild(extractPubBtn)
+    actionsWrap.appendChild(extractPrivBtn)
+    actionsWrap.appendChild(delBtn)
+
+    row.appendChild(actionsWrap)
 
     return row
   }
