@@ -9,6 +9,8 @@ import { app } from "./app"
 import { members } from "./members"
 import { diceTokens } from "./dice-tokens"
 import { room } from "./room"
+import { ai } from "./ai"
+import { notes } from "./notes"
 
 export const buildAPI = () => {
   return {
@@ -16,6 +18,8 @@ export const buildAPI = () => {
     members,
     diceTokens,
     room,
+    ai,
+    notes,
     getReduxState: () => {
       const { store } = getServices()
       return store.getState()

@@ -217,5 +217,27 @@ export const ccf = {
     getVariableByLabel: (label: string) => ccfoliaRPC<{ label: string; value: string } | undefined>("room.getVariableByLabel", label),
     setVariable: (label: string, value: string) => ccfoliaRPC<void>("room.setVariable", label, value),
     deleteVariable: (label: string) => ccfoliaRPC<void>("room.deleteVariable", label)
+  },
+
+  // ccf.ai
+  ai: {
+    generateReply: (
+      apiKey: string,
+      systemPrompt: string,
+      chatHistory: Array<{ role: "system" | "user" | "assistant"; content: string; name?: string }>,
+      model?: string
+    ) => ccfoliaRPC<string>("ai.generateReply", apiKey, systemPrompt, chatHistory, model)
+  },
+
+  // ccf.notes
+  notes: {
+    getAll: () => ccfoliaRPC<any[]>("notes.getAllNotes"),
+    getById: (noteId: string) => ccfoliaRPC<any>("notes.getById", noteId),
+    getByName: (name: string) => ccfoliaRPC<any>("notes.getByName", name),
+    search: (keyword: string) => ccfoliaRPC<any[]>("notes.search", keyword),
+    searchTitle: (keyword: string) => ccfoliaRPC<any[]>("notes.searchTitle", keyword),
+    addRoomNote: () => ccfoliaRPC<void>("notes.addRoomNote"),
+    updateRoomNote: (noteId: string, item: Record<string, any>) => ccfoliaRPC<void>("notes.updateRoomNote", noteId, item),
+    deleteRoomNote: (noteId: string) => ccfoliaRPC<void>("notes.deleteRoomNote", noteId)
   }
 }

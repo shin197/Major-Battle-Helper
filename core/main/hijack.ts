@@ -57,6 +57,7 @@ export function getServices() {
   const appActions = resolveAppActions(req) // 👈 앱(App) 액션 탈취
   const deckActions = resolveDeckActions(req) // 👈 덱(Deck) 액션 탈취
   const diceActions = resolveDiceActions(req) // 👈 주사위(Dice) 액션 탈취
+  const noteActions = resolveNoteActions(req) // 👈 룸 노트(RoomNote) 액션 탈취
 
   const state = store.getState()
   const roomId = state.app?.state?.roomId
@@ -76,6 +77,7 @@ export function getServices() {
     appActions,
     deckActions,
     diceActions,
+    noteActions,
     roomId,
     rc
   }
@@ -364,7 +366,7 @@ function pickRoomActions(mod: any) {
     const val = mod[key]
     if (typeof val === "function") {
       const fnStr = val.toString()
-      if (fnStr.includes('"update-marker"')) return mod
+      if (fnStr.includes("updateRoomMarker")) return mod
     }
   }
   return null
@@ -448,6 +450,48 @@ function resolveDeckActions(req: any) {
   return null
 }
 
+function resolveNoteActions(req: any) {
+  window.__CCFOLIA_MOD_CACHE__ ??= {}
+
+  const cachedId = window.__CCFOLIA_MOD_CACHE__.noteActionsId
+  if (cachedId != null) {
+    try {
+      const mod = req(cachedId)
+      if (pickNoteActions(mod)) return mod
+    } catch { }
+  }
+
+  try {
+    const mod = req(68005)
+    if (pickNoteActions(mod)) {
+      window.__CCFOLIA_MOD_CACHE__.noteActionsId = 68005
+      return mod
+    }
+  } catch { }
+
+  const noteActionsId = findModuleIdByExportShape(req, pickNoteActions)
+  if (noteActionsId != null) {
+    window.__CCFOLIA_MOD_CACHE__.noteActionsId = noteActionsId
+    return req(noteActionsId)
+  }
+
+  return null
+}
+
+function pickNoteActions(mod: any) {
+  if (!mod || typeof mod !== "object") return null
+  if (typeof mod.addRoomNote === "function") return mod
+
+  for (const key of Object.keys(mod)) {
+    const val = mod[key]
+    if (typeof val === "function") {
+      const fnStr = val.toString()
+      if (fnStr.includes('"addRoomNote"') || fnStr.includes('"updateRoomNote"')) return mod
+    }
+  }
+  return null
+}
+
 function pickDeckActions(mod: any) {
   if (!mod || typeof mod !== "object") return null
 
@@ -457,7 +501,7 @@ function pickDeckActions(mod: any) {
     const val = mod[key]
     if (typeof val === "function") {
       const fnStr = val.toString()
-      if (fnStr.includes('"update-deck"') || fnStr.includes("createPlayingCards")) {
+      if (fnStr.includes('"updateRoomDeck"') || fnStr.includes("createPlayingCards")) {
         return mod
       }
     }

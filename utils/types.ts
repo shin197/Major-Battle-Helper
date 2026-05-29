@@ -81,6 +81,7 @@ declare global {
       appActionsId?: number
       deckActionsId?: number
       diceActionsId?: number
+      noteActionsId?: number
     }
   }
 }
