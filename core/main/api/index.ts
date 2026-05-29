@@ -8,12 +8,14 @@ import { decks } from "./decks"
 import { app } from "./app"
 import { members } from "./members"
 import { diceTokens } from "./dice-tokens"
+import { room } from "./room"
 
 export const buildAPI = () => {
   return {
     app,
     members,
     diceTokens,
+    room,
     getReduxState: () => {
       const { store } = getServices()
       return store.getState()

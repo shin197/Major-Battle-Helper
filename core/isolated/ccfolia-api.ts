@@ -208,5 +208,14 @@ export const ccf = {
     roll: (diceId: string) => ccfoliaRPC<void>("diceTokens.roll", diceId),
     rollSilent: (diceId: string) => ccfoliaRPC<void>("diceTokens.rollSilent", diceId),
     rollSilentWithOptions: (diceId: string, options: { faces: number, closed: boolean }) => ccfoliaRPC<void>("diceTokens.rollSilentWithOptions", diceId, options)
+  },
+
+  // ccf.room
+  room: {
+    updateRoom: (payload: Record<string, any>) => ccfoliaRPC<void>("room.updateRoom", payload),
+    getAllVariables: () => ccfoliaRPC<Array<{ label: string; value: string }>>("room.getAllVariables"),
+    getVariableByLabel: (label: string) => ccfoliaRPC<{ label: string; value: string } | undefined>("room.getVariableByLabel", label),
+    setVariable: (label: string, value: string) => ccfoliaRPC<void>("room.setVariable", label, value),
+    deleteVariable: (label: string) => ccfoliaRPC<void>("room.deleteVariable", label)
   }
 }
