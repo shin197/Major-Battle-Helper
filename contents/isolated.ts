@@ -19,6 +19,7 @@ import { initFaceBulkAdd } from "~features/multi-image-picker"
 
 import { initChatLogPager } from "../features/log-pager"
 import { initToastObserver } from "../utils/isolated/toast"
+import { initAiChatBtn } from "~features/ai-chat-btn"
 
 export const config: PlasmoCSConfig = {
   matches: ["https://ccfolia.com/*"],
@@ -54,7 +55,8 @@ const isolatedFeatures: FeatureDefinition[] = [
   { id: "more-menu", name: "향상된 컨텍스트 액션", init: initContextMenuActions },
   { id: "more-menu", name: "세부 편집창 액션", init: initMenuActions },
   { id: "more-menu", name: "표정 일괄 추가", init: initFaceBulkAdd },
-  { id: "home-history", name: "홈 방문 기록", init: initHomeHistory, defaultEnabled: true }
+  { id: "home-history", name: "홈 방문 기록", init: initHomeHistory, defaultEnabled: true },
+  { id: "ai-chat", name: "AI NPC 보조", init: initAiChatBtn }
 ]
 
 // 실행!

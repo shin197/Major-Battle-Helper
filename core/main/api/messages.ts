@@ -188,6 +188,31 @@ export const messages = {
   },
 
   /**
+   * 최근 채팅 목록 중 메인 탭(main)의 메시지만 지정한 개수만큼 가져옵니다.
+   * 지워지지 않은(removed: false) 메시지를 최신순으로 가져와 역순으로 리턴합니다.
+   */
+  getRecentMessages: (limit: number) => {
+    const allMsgs = messages.getAll() as any[]
+
+    // 필터링: 삭제되지 않았고, 채널이 main인 것
+    const validMsgs = allMsgs.filter(msg => msg.removed !== true && msg.channel === "main")
+
+    // timestamp 계산: (seconds + nanoseconds / 1000000000)
+    // 최신순으로 정렬 (createdAt이 클수록 최신)
+    validMsgs.sort((a, b) => {
+      const aTime = (a.createdAt?.seconds || 0) + (a.createdAt?.nanoseconds || 0) / 1e9
+      const bTime = (b.createdAt?.seconds || 0) + (b.createdAt?.nanoseconds || 0) / 1e9
+      return bTime - aTime // 내림차순
+    })
+
+    // limit 개수만큼 자름
+    const recent = validMsgs.slice(0, limit)
+
+    // LLM 등에서 시간 순서대로 읽을 수 있게 다시 오름차순(과거->현재)으로 정렬하여 리턴
+    return recent.reverse()
+  },
+
+  /**
    * 내부용: 공통 Firestore 메시지 전송 로직
    */
   _sendDirectMessage: async (text: string, overrides?: any) => {
@@ -475,7 +500,7 @@ export const messages = {
 }
 
 // =====================================================================
-// 메시지 DOM 태깅 (branch-world-battle-advice 스타일)
+// 메시지 DOM 태깅
 // Redux roomMessages 순서와 DOM 순서를 역방향 매칭하여 data-msg-id 주입
 // =====================================================================
 let _tagInProgress = false

@@ -179,6 +179,7 @@ export const ccf = {
   // ccf.messages
   messages: {
     getAll: () => ccfoliaRPC<any[]>("messages.getAll"),
+    getRecentMessages: (limit: number) => ccfoliaRPC<any[]>("messages.getRecentMessages", limit),
     delete: (messageId: string) => ccfoliaRPC<void>("messages.delete", messageId),
     edit: (messageId: string, newText: string) => ccfoliaRPC<void>("messages.edit", messageId, newText),
     sendSystemMessage: (text: string, channel?: { channel: string; channelName: string }) =>
@@ -225,8 +226,9 @@ export const ccf = {
       apiKey: string,
       systemPrompt: string,
       chatHistory: Array<{ role: "system" | "user" | "assistant"; content: string; name?: string }>,
-      model?: string
-    ) => ccfoliaRPC<string>("ai.generateReply", apiKey, systemPrompt, chatHistory, model)
+      model?: string,
+      characterId?: string
+    ) => ccfoliaRPC<string>("ai.generateReply", apiKey, systemPrompt, chatHistory, model, characterId)
   },
 
   // ccf.notes

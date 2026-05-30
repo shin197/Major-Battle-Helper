@@ -143,7 +143,7 @@ function hideNonSendChildren(toolbar: HTMLElement) {
     const selfIsSend = (ch.matches('button[type="submit"]') &&
       isSendButton(ch)) as boolean
 
-    if (selfIsSend || hasSendInside) {
+    if (selfIsSend || hasSendInside || ch.classList.contains("mb-ai-btn")) {
       // keep
     } else {
       // 안전을 위해 DOM 제거 대신 숨김 권장(원 사이트 핸들러 영향 최소화)
@@ -158,7 +158,7 @@ function makeInlineControlUI() {
   wrap.className = "ccf-nav-inline"
   Object.assign(wrap.style, {
     display: "inline-flex",
-    gap: "8px",
+    gap: "4px",
     alignItems: "center",
     marginLeft: "8px" // 전송 버튼과 간격
   } as CSSStyleDeclaration)
@@ -169,9 +169,11 @@ function makeInlineControlUI() {
     b.textContent = label
     Object.assign(b.style, {
       padding: "6px 10px",
-      border: "1px solid rgba(0,0,0,.2)",
-      borderRadius: "8px",
-      background: "rgba(0,0,0,.04)",
+      border: "none",
+      // borderRadius: "8px",
+      // border: "1px solid rgba(0,0,0,.2)",
+      // borderRadius: "8px",
+      background: "rgba(0,0,0,0)",
       cursor: "pointer",
       color: "#fff"
       // font: "13px/1.2 system-ui,-apple-system,Segoe UI,Roboto,Arial"
@@ -182,7 +184,7 @@ function makeInlineControlUI() {
   const prevBtn = mkBtn("<")
   const nextBtn = mkBtn(">")
   const preloadBtn = mkBtn("<<")
-  const bottomBtn = mkBtn(">>") // ← 추가
+  const bottomBtn = mkBtn(">>")
 
   const pageLabel = document.createElement("span")
   pageLabel.textContent = "1" // ← 초기 표기
@@ -224,7 +226,7 @@ function applyToolbarLayout(toolbar: HTMLElement, uiWrap: HTMLElement) {
     flex: "1 1 auto",
     minWidth: "0",
     display: "flex",
-    justifyContent: "center",
+    justifyContent: "space-between",
     alignItems: "center",
     flexWrap: "wrap",
     marginLeft: "0" // 예전 인라인 여백 제거
@@ -233,9 +235,6 @@ function applyToolbarLayout(toolbar: HTMLElement, uiWrap: HTMLElement) {
   // 전송 버튼(또는 래퍼)을 오른쪽 끝으로
   const sendWrap = findSendElement(toolbar)
   if (sendWrap) {
-    // 보통은 sendWrap이 마지막 child여야 자연스럽게 오른쪽에 감.
-    // 혹시 중간이면 margin-left:auto 로 오른쪽 끝으로 밀어낸다.
-    sendWrap.style.marginLeft = "auto"
     // 줄 바꿈 방지(옵션)
     sendWrap.style.whiteSpace = "nowrap"
   }
@@ -252,6 +251,15 @@ function insertUiBeforeSend(toolbar: HTMLElement, uiWrap: HTMLElement) {
     const last = toolbar.lastElementChild as HTMLElement
     const btn = last.querySelector<HTMLElement>('button,input[type="submit"]')
     if (btn && isSendButton(btn)) sendEl = last
+  }
+
+  // ✨ 버튼이 전송 버튼 바로 앞에 있다면, ✨ 버튼 앞으로 페이저를 삽입 (우측에 같이 밀리도록)
+  if (sendEl) {
+    const prev = sendEl.previousElementSibling
+    if (prev && prev.classList.contains("mb-ai-btn")) {
+      toolbar.insertBefore(uiWrap, prev)
+      return
+    }
   }
 
   toolbar.insertBefore(uiWrap, sendEl)

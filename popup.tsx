@@ -158,12 +158,14 @@ function FeatureToggle({
   id,
   label,
   description,
-  onToggle
+  onToggle,
+  onSettingsClick
 }: {
   id: string
   label: string
   description?: string
   onToggle: () => void
+  onSettingsClick?: () => void
 }) {
   const [enabled, setEnabled] = useStorage(`feature:${id}`, true)
 
@@ -195,6 +197,34 @@ function FeatureToggle({
         </div>
         {description && <InfoPopover text={description} />}
       </div>
+
+      {/* 설정 버튼 및 토글 스위치 영역 */}
+      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        {onSettingsClick && (
+          <button
+            onClick={onSettingsClick}
+            title="세부 설정"
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: "4px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#64748b",
+              borderRadius: "4px",
+              transition: "background 0.2s"
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = "#e2e8f0"}
+            onMouseLeave={e => e.currentTarget.style.background = "none"}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+          </button>
+        )}
 
       {/* iOS 스타일 토글 스위치 */}
       <label
@@ -238,18 +268,174 @@ function FeatureToggle({
           />
         </div>
       </label>
+      </div>
     </div>
   )
 }
 
 // ==========================================
-// 4. 메인 팝업 앱
+// 4. AI 세부 설정 컴포넌트
+// ==========================================
+function AiSettingsView({ onBack }: { onBack: () => void }) {
+  const [roomId, setRoomId] = useState<string | null>(null)
+  const [apiKey, setApiKey] = useState("")
+  const [systemPrompt, setSystemPrompt] = useState("")
+  const [isSaved, setIsSaved] = useState(false)
+
+  useEffect(() => {
+    // 현재 활성화된 탭 조회
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const url = tabs[0]?.url || ""
+      const match = url.match(/\/rooms\/([a-zA-Z0-9_-]+)/)
+      if (match) {
+        const id = match[1]
+        setRoomId(id)
+        // 설정 로드
+        chrome.storage.local.get(`ai_settings_${id}`, (res) => {
+          const data = res[`ai_settings_${id}`]
+          if (data) {
+            setApiKey(data.apiKey || "")
+            setSystemPrompt(data.systemPrompt || "")
+          }
+        })
+      }
+    })
+  }, [])
+
+  const handleSave = () => {
+    if (!roomId) return
+    chrome.storage.local.set({
+      [`ai_settings_${roomId}`]: { apiKey, systemPrompt }
+    }, () => {
+      setIsSaved(true)
+      setTimeout(() => setIsSaved(false), 2000)
+    })
+  }
+
+  const handleDeleteAll = () => {
+    if (!confirm("모든 방의 AI 설정(API 키, 프롬프트)을 삭제하시겠습니까?")) return
+    chrome.storage.local.get(null, (items) => {
+      const keysToRemove = Object.keys(items).filter(k => k.startsWith("ai_settings_"))
+      if (keysToRemove.length > 0) {
+        chrome.storage.local.remove(keysToRemove, () => {
+          alert("모든 설정이 삭제되었습니다.")
+          setApiKey("")
+          setSystemPrompt("")
+        })
+      }
+    })
+  }
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      const text = ev.target?.result
+      if (typeof text === "string") {
+        setSystemPrompt(text)
+      }
+    }
+    reader.readAsText(file)
+  }
+
+  return (
+    <div style={{ padding: "16px", display: "flex", flexDirection: "column", height: "100%" }}>
+      {/* 뒤로가기 헤더 */}
+      <div style={{ display: "flex", alignItems: "center", marginBottom: "16px" }}>
+        <button
+          onClick={onBack}
+          style={{
+            background: "none", border: "none", cursor: "pointer",
+            fontSize: "16px", color: "#64748b", padding: "0 8px 0 0"
+          }}
+        >
+          ← 뒤로
+        </button>
+        <h3 style={{ margin: 0, fontSize: "16px", fontWeight: "600", color: "#1e293b" }}>
+          AI NPC 설정
+        </h3>
+      </div>
+
+      {!roomId ? (
+        <div style={{ textAlign: "center", color: "#64748b", marginTop: "20px" }}>
+          현재 코코포리아 방(Room)에 접속해 있지 않습니다.<br /><br />
+          방에 접속한 상태에서 확장 프로그램 팝업을 열어야 설정할 수 있습니다.
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          <div style={{ fontSize: "13px", color: "#475569" }}>
+            <b>현재 방 ID:</b> <code>{roomId}</code>
+          </div>
+
+          <div>
+            <label style={{ display: "block", fontSize: "13px", fontWeight: "600", marginBottom: "6px" }}>
+              OpenAI API 키
+            </label>
+            <input
+              type="password"
+              value={apiKey}
+              onChange={e => setApiKey(e.target.value)}
+              placeholder="sk-..."
+              style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #cbd5e1", boxSizing: "border-box" }}
+            />
+          </div>
+
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+              <label style={{ fontSize: "13px", fontWeight: "600" }}>
+                시스템 프롬프트 (System Prompt)
+              </label>
+              <label style={{ fontSize: "12px", color: "#3b82f6", cursor: "pointer", textDecoration: "underline" }}>
+                파일 업로드
+                <input type="file" accept=".txt,.md" style={{ display: "none" }} onChange={handleFileUpload} />
+              </label>
+            </div>
+            <textarea
+              value={systemPrompt}
+              onChange={e => setSystemPrompt(e.target.value)}
+              placeholder="AI에게 부여할 역할이나 세계관, NPC의 성격 등을 적어주세요."
+              style={{ width: "100%", height: "120px", padding: "8px", borderRadius: "6px", border: "1px solid #cbd5e1", boxSizing: "border-box", resize: "none" }}
+            />
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "space-between", marginTop: "8px" }}>
+            <button
+              onClick={handleDeleteAll}
+              style={{ padding: "8px 12px", borderRadius: "6px", border: "1px solid #ef4444", color: "#ef4444", background: "none", cursor: "pointer", fontSize: "13px" }}
+            >
+              일괄 삭제
+            </button>
+            <button
+              onClick={handleSave}
+              style={{ padding: "8px 16px", borderRadius: "6px", border: "none", backgroundColor: isSaved ? "#10b981" : "#3b82f6", color: "#fff", cursor: "pointer", fontSize: "13px", fontWeight: "600", transition: "background 0.2s" }}
+            >
+              {isSaved ? "저장됨 ✔" : "저장하기"}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ==========================================
+// 5. 메인 팝업 앱
 // ==========================================
 export default function IndexPopup() {
   const [hasChanged, setHasChanged] = useState(false)
+  const [showAiSettings, setShowAiSettings] = useState(false)
 
   const handleSettingsChange = () => {
     setHasChanged(true)
+  }
+
+  if (showAiSettings) {
+    return (
+      <div style={{ width: "340px", fontFamily: "Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif", backgroundColor: "#fff", minHeight: "450px" }}>
+        <AiSettingsView onBack={() => setShowAiSettings(false)} />
+      </div>
+    )
   }
 
   return (
@@ -369,6 +555,15 @@ export default function IndexPopup() {
             "코코포리아 홈(/home)에 최근 방문했던 방 목록을 표시합니다."
           }
           onToggle={handleSettingsChange}
+        />
+        <FeatureToggle
+          id="ai-chat"
+          label="AI NPC 보조"
+          description={
+            "우측 설정 버튼을 눌러 API 키와 시스템 프롬프트를 등록하면, 채팅 입력창에서 AI가 작성한 NPC 대사를 제안받을 수 있습니다."
+          }
+          onToggle={handleSettingsChange}
+          onSettingsClick={() => setShowAiSettings(true)}
         />
       </div>
 

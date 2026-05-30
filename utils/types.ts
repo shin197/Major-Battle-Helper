@@ -56,11 +56,40 @@ export interface CcfoliaDiceToken {
   [key: string]: any
 }
 
+export interface CcfoliaMessage {
+  _id: string
+  channelName: string
+  channel: string
+  color: string
+  imageUrl: string
+  toName: string
+  iconUrl: string
+  text: string
+  updatedAt: {
+    seconds: number
+    nanoseconds: number
+  },
+  to: null,
+  name: string,
+  edited: boolean,
+  createdAt: {
+    seconds: number
+    nanoseconds: number
+  },
+  type: string,
+  from: string
+}
+
 export type CcReq = {
   id: string
   type: "ccfolia:call"
   method: string
   args: any[]
+}
+
+export interface AiSettings {
+  apiKey: string
+  systemPrompt: string
 }
 
 export type CcRes =
@@ -85,3 +114,4 @@ declare global {
     }
   }
 }
+

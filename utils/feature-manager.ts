@@ -60,6 +60,16 @@ export function initSettingsBridge() {
       // MAIN 쪽으로 답변(settings)을 쏴줍니다.
       window.postMessage({ type: "MBH_PROVIDE_SETTINGS", settings }, "*")
     }
+
+    // AI 설정값 전용 브릿지
+    if (event.data?.type === "MBH_REQUEST_AI_SETTINGS") {
+      const { roomId } = event.data
+      if (!roomId) return
+      chrome.storage.local.get(`ai_settings_${roomId}`, (res) => {
+        const aiSettings = res[`ai_settings_${roomId}`] || {}
+        window.postMessage({ type: "MBH_PROVIDE_AI_SETTINGS", aiSettings }, "*")
+      })
+    }
   })
 }
 

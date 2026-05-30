@@ -42,6 +42,7 @@ export const buildAPI = () => {
     deleteSelectedObjectsWithUndo: tokens.deleteSelectedObjectsWithUndo,
     messages,
     getAllMessages: messages.getAll,
+    getRecentMessages: messages.getRecentMessages,
     modifyRollResult: messages.modifyRollResult,
     deleteMessage: messages.delete,
     sendSystemMessage: messages.sendSystemMessage,
