@@ -270,8 +270,8 @@ function enableChatHistory(ev: KeyboardEvent) {
   if (ev.key === "ArrowUp" || ev.key === "ArrowDown") {
     const isModifierPressed = ev.altKey || ev.ctrlKey
 
-    // [특수 편집 모드] 히스토리 탐색 중이 아닐 때 Alt+Up
-    if (ev.key === "ArrowUp" && ev.altKey && historyIndex === chatHistory.length && !editingMessageId) {
+    // [특수 편집 모드] 히스토리 탐색 중이 아닐 때 Alt+Up (히스토리가 없어서 -1인 경우 포함)
+    if (ev.key === "ArrowUp" && ev.altKey && (historyIndex === chatHistory.length || historyIndex === -1) && !editingMessageId) {
       ev.preventDefault()
       ev.stopImmediatePropagation()
       enterEditMode(ta, "prev")
