@@ -226,48 +226,48 @@ function FeatureToggle({
           </button>
         )}
 
-      {/* iOS 스타일 토글 스위치 */}
-      <label
-        style={{
-          position: "relative",
-          display: "inline-block",
-          width: "44px",
-          height: "24px",
-          cursor: "pointer",
-          flexShrink: 0
-        }}>
-        <input
-          type="checkbox"
-          checked={enabled}
-          onChange={handleChange}
-          style={{ opacity: 0, width: 0, height: 0 }}
-        />
-        <div
+        {/* iOS 스타일 토글 스위치 */}
+        <label
           style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: enabled ? "#4A90E2" : "#cbd5e1",
-            borderRadius: "24px",
-            transition: "0.3s"
+            position: "relative",
+            display: "inline-block",
+            width: "44px",
+            height: "24px",
+            cursor: "pointer",
+            flexShrink: 0
           }}>
+          <input
+            type="checkbox"
+            checked={enabled}
+            onChange={handleChange}
+            style={{ opacity: 0, width: 0, height: 0 }}
+          />
           <div
             style={{
               position: "absolute",
-              height: "20px",
-              width: "20px",
-              left: enabled ? "22px" : "2px",
-              bottom: "2px",
-              backgroundColor: "white",
-              borderRadius: "50%",
-              transition: "0.3s",
-              boxShadow: "0 2px 4px rgba(0,0,0,0.2)"
-            }}
-          />
-        </div>
-      </label>
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: enabled ? "#4A90E2" : "#cbd5e1",
+              borderRadius: "24px",
+              transition: "0.3s"
+            }}>
+            <div
+              style={{
+                position: "absolute",
+                height: "20px",
+                width: "20px",
+                left: enabled ? "22px" : "2px",
+                bottom: "2px",
+                backgroundColor: "white",
+                borderRadius: "50%",
+                transition: "0.3s",
+                boxShadow: "0 2px 4px rgba(0,0,0,0.2)"
+              }}
+            />
+          </div>
+        </label>
       </div>
     </div>
   )
@@ -276,54 +276,96 @@ function FeatureToggle({
 // ==========================================
 // 4. AI 세부 설정 컴포넌트
 // ==========================================
+const DEFAULT_SYSTEM_PROMPT = `당신은 TTRPG 세션에서 NPC를 연기합니다.
+당신은 GM이 아닙니다. 당신은 오직 지정된 캐릭터의 대사, 태도, 감정, 행동 선언만 작성합니다.
+
+[권한]
+할 수 있는 것:
+- 지정된 캐릭터의 대사 작성
+- 지정된 캐릭터의 짧은 행동 묘사
+- 지정된 캐릭터의 의도와 행동 선언
+- 룰이나 정보가 불확실할 때 GM에게 질문
+
+하면 안 되는 것:
+- 다른 PC/NPC의 행동, 감정, 결과를 확정하기
+- 판정 결과를 확정하기
+- 지정된 캐릭터가 아닌 캐릭터 또는 한 번에 두 명 이상의 캐릭터를 롤플레잉 하기
+- 숨겨진 정보를 아는 것처럼 말하기
+- 세계관에 없는 설정, 조직, 비밀을 임의로 추가하기
+- 장면을 멋대로 전환하거나 종료하기
+- 플레이어의 의도를 대신 결정하기
+
+[출력 형식]
+- 캐릭터의 반응만 작성한다.
+- 응답의 맨 앞에 절대 캐릭터의 이름을 쓰지 않는다. (예: "[캐릭터]: " 와 같은 화자 표시 금지)
+- 대사는 5문장 이내로 제한한다. 큰 따옴표로 감싼다. 연속되는 대사는 따옴표를 닫지 않고 이어서 작성한다.
+- 필요하다면, 내면의 생각 묘사는 소괄호와 작은 따옴표로 감싼다. ('내면의 생각 묘사')
+- 필요하다면, 행동 묘사는 대사나 내면의 생각 묘사 뒤에 짧게 작성하며, 따옴표로 감싸지 않는다.
+- 대사, 생각 묘사, 행동 묘사를 전환할 때는 개행 (\n)을 붙인다.
+- 판정이나 룰 확인이 필요하면 대사, 행동 묘사, 생각 묘사를 일절 하지 않고 바로 [GM 확인: ...]을 붙인다.`;
+
+const AI_MODELS = [
+  { id: "gpt-4.1-mini", name: "GPT-4.1 Mini", provider: "openai" },
+  { id: "gpt-5.4-mini", name: "GPT-5.4 Mini", provider: "openai" },
+  { id: "gpt-5.5", name: "GPT-5.5", provider: "openai" },
+  { id: "gemini-1.5-pro", name: "Gemini 1.5 Pro", provider: "gemini" },
+  { id: "claude-3-opus", name: "Claude 3 Opus", provider: "claude" },
+  { id: "grok-1.5", name: "Grok 1.5", provider: "grok" },
+]
+
 function AiSettingsView({ onBack }: { onBack: () => void }) {
-  const [roomId, setRoomId] = useState<string | null>(null)
-  const [apiKey, setApiKey] = useState("")
-  const [systemPrompt, setSystemPrompt] = useState("")
-  const [isSaved, setIsSaved] = useState(false)
+  const [apiKeys, setApiKeys] = useState<Record<string, string>>({})
+  const [systemPrompt, setSystemPrompt] = useState(DEFAULT_SYSTEM_PROMPT)
+  const [model, setModel] = useState("gpt-4.1-mini")
+  const [historyCount, setHistoryCount] = useState(30)
+
+  const [backup, setBackup] = useState<any>(null)
 
   useEffect(() => {
-    // 현재 활성화된 탭 조회
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      const url = tabs[0]?.url || ""
-      const match = url.match(/\/rooms\/([a-zA-Z0-9_-]+)/)
-      if (match) {
-        const id = match[1]
-        setRoomId(id)
-        // 설정 로드
-        chrome.storage.local.get(`ai_settings_${id}`, (res) => {
-          const data = res[`ai_settings_${id}`]
-          if (data) {
-            setApiKey(data.apiKey || "")
-            setSystemPrompt(data.systemPrompt || "")
-          }
-        })
+    chrome.storage.local.get("ai_settings_global", (res) => {
+      const data = res["ai_settings_global"]
+      if (data) {
+        const keys = data.apiKeys || {}
+        if (data.apiKey && !keys["openai"]) {
+          keys["openai"] = data.apiKey
+        }
+        const prompt = data.systemPrompt || DEFAULT_SYSTEM_PROMPT
+        const m = data.model || "gpt-4.1-mini"
+        const hc = data.historyCount ?? 30
+
+        setApiKeys(keys)
+        setSystemPrompt(prompt)
+        setModel(m)
+        setHistoryCount(hc)
+
+        setBackup({ apiKeys: keys, systemPrompt: prompt, model: m, historyCount: hc })
+      } else {
+        setBackup({ apiKeys: {}, systemPrompt: DEFAULT_SYSTEM_PROMPT, model: "gpt-4.1-mini", historyCount: 30 })
       }
     })
   }, [])
 
-  const handleSave = () => {
-    if (!roomId) return
-    chrome.storage.local.set({
-      [`ai_settings_${roomId}`]: { apiKey, systemPrompt }
-    }, () => {
-      setIsSaved(true)
-      setTimeout(() => setIsSaved(false), 2000)
-    })
+  useEffect(() => {
+    if (backup !== null) {
+      chrome.storage.local.set({
+        "ai_settings_global": { apiKeys, systemPrompt, model, historyCount, apiKey: apiKeys["openai"] || "" }
+      })
+    }
+  }, [apiKeys, systemPrompt, model, historyCount, backup])
+
+  const handleCancel = () => {
+    if (backup) {
+      setApiKeys(backup.apiKeys)
+      setSystemPrompt(backup.systemPrompt)
+      setModel(backup.model)
+      setHistoryCount(backup.historyCount)
+    }
   }
 
-  const handleDeleteAll = () => {
-    if (!confirm("모든 방의 AI 설정(API 키, 프롬프트)을 삭제하시겠습니까?")) return
-    chrome.storage.local.get(null, (items) => {
-      const keysToRemove = Object.keys(items).filter(k => k.startsWith("ai_settings_"))
-      if (keysToRemove.length > 0) {
-        chrome.storage.local.remove(keysToRemove, () => {
-          alert("모든 설정이 삭제되었습니다.")
-          setApiKey("")
-          setSystemPrompt("")
-        })
-      }
-    })
+  const handleResetToDefault = () => {
+    if (!confirm("시스템 프롬프트와 옵션을 기본값으로 초기화하시겠습니까?")) return
+    setSystemPrompt(DEFAULT_SYSTEM_PROMPT)
+    setHistoryCount(30)
   }
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -337,6 +379,13 @@ function AiSettingsView({ onBack }: { onBack: () => void }) {
       }
     }
     reader.readAsText(file)
+  }
+
+  const currentProvider = AI_MODELS.find(m => m.id === model)?.provider || "openai"
+  const currentProviderName = currentProvider.charAt(0).toUpperCase() + currentProvider.slice(1)
+
+  const handleApiKeyChange = (val: string) => {
+    setApiKeys(prev => ({ ...prev, [currentProvider]: val }))
   }
 
   return (
@@ -357,64 +406,99 @@ function AiSettingsView({ onBack }: { onBack: () => void }) {
         </h3>
       </div>
 
-      {!roomId ? (
-        <div style={{ textAlign: "center", color: "#64748b", marginTop: "20px" }}>
-          현재 코코포리아 방(Room)에 접속해 있지 않습니다.<br /><br />
-          방에 접속한 상태에서 확장 프로그램 팝업을 열어야 설정할 수 있습니다.
-        </div>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-          <div style={{ fontSize: "13px", color: "#475569" }}>
-            <b>현재 방 ID:</b> <code>{roomId}</code>
+      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+        <div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+            <label style={{ fontSize: "13px", fontWeight: "600" }}>
+              {currentProviderName} API 키 (전역 설정)
+            </label>
+            <button
+              onClick={() => {
+                if (confirm("모든 제공자의 API 키를 삭제하시겠습니까?")) setApiKeys({})
+              }}
+              style={{ background: "none", border: "none", fontSize: "12px", color: "#ef4444", cursor: "pointer", textDecoration: "underline", padding: 0 }}
+            >
+              키 전체 삭제
+            </button>
           </div>
+          <input
+            type="password"
+            value={apiKeys[currentProvider] || ""}
+            onChange={e => handleApiKeyChange(e.target.value)}
+            placeholder={`${currentProviderName} API Key...`}
+            style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #cbd5e1", boxSizing: "border-box" }}
+          />
+        </div>
 
-          <div>
+        <div style={{ display: "flex", gap: "12px" }}>
+          <div style={{ flex: 1 }}>
             <label style={{ display: "block", fontSize: "13px", fontWeight: "600", marginBottom: "6px" }}>
-              OpenAI API 키
+              모델 선택
+            </label>
+            <select
+              value={model}
+              onChange={e => setModel(e.target.value)}
+              style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #cbd5e1", boxSizing: "border-box" }}
+            >
+              {AI_MODELS.map(m => (
+                <option key={m.id} value={m.id}>{m.name}</option>
+              ))}
+            </select>
+          </div>
+          <div style={{ width: "100px" }}>
+            <label style={{ display: "block", fontSize: "13px", fontWeight: "600", marginBottom: "6px" }}>
+              메시지 수
             </label>
             <input
-              type="password"
-              value={apiKey}
-              onChange={e => setApiKey(e.target.value)}
-              placeholder="sk-..."
+              type="number"
+              min={1}
+              max={100}
+              value={historyCount}
+              onChange={e => setHistoryCount(Number(e.target.value))}
               style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #cbd5e1", boxSizing: "border-box" }}
             />
           </div>
+        </div>
 
-          <div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
-              <label style={{ fontSize: "13px", fontWeight: "600" }}>
-                시스템 프롬프트 (System Prompt)
-              </label>
-              <label style={{ fontSize: "12px", color: "#3b82f6", cursor: "pointer", textDecoration: "underline" }}>
-                파일 업로드
+        <div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+            <label style={{ fontSize: "13px", fontWeight: "600" }}>
+              시스템 프롬프트 (System Prompt)
+            </label>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <label style={{ cursor: "pointer", display: "flex", alignItems: "center", color: "#64748b" }} title="프롬프트 파일 업로드">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="17 8 12 3 7 8"></polyline>
+                  <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
                 <input type="file" accept=".txt,.md" style={{ display: "none" }} onChange={handleFileUpload} />
               </label>
             </div>
-            <textarea
-              value={systemPrompt}
-              onChange={e => setSystemPrompt(e.target.value)}
-              placeholder="AI에게 부여할 역할이나 세계관, NPC의 성격 등을 적어주세요."
-              style={{ width: "100%", height: "120px", padding: "8px", borderRadius: "6px", border: "1px solid #cbd5e1", boxSizing: "border-box", resize: "none" }}
-            />
           </div>
-
-          <div style={{ display: "flex", justifyContent: "space-between", marginTop: "8px" }}>
-            <button
-              onClick={handleDeleteAll}
-              style={{ padding: "8px 12px", borderRadius: "6px", border: "1px solid #ef4444", color: "#ef4444", background: "none", cursor: "pointer", fontSize: "13px" }}
-            >
-              일괄 삭제
-            </button>
-            <button
-              onClick={handleSave}
-              style={{ padding: "8px 16px", borderRadius: "6px", border: "none", backgroundColor: isSaved ? "#10b981" : "#3b82f6", color: "#fff", cursor: "pointer", fontSize: "13px", fontWeight: "600", transition: "background 0.2s" }}
-            >
-              {isSaved ? "저장됨 ✔" : "저장하기"}
-            </button>
-          </div>
+          <textarea
+            value={systemPrompt}
+            onChange={e => setSystemPrompt(e.target.value)}
+            placeholder="AI에게 부여할 역할이나 세계관, NPC의 성격 등을 적어주세요."
+            style={{ width: "100%", height: "160px", padding: "8px", borderRadius: "6px", border: "1px solid #cbd5e1", boxSizing: "border-box", resize: "none" }}
+          />
         </div>
-      )}
+
+        <div style={{ display: "flex", justifyContent: "space-between", marginTop: "8px" }}>
+          <button
+            onClick={handleResetToDefault}
+            style={{ padding: "8px 12px", borderRadius: "6px", border: "1px solid #ef4444", color: "#ef4444", background: "none", cursor: "pointer", fontSize: "13px" }}
+          >
+            초기화
+          </button>
+          <button
+            onClick={handleCancel}
+            style={{ padding: "8px 16px", borderRadius: "6px", border: "1px solid #cbd5e1", color: "#64748b", background: "none", cursor: "pointer", fontSize: "13px", fontWeight: "600", transition: "background 0.2s" }}
+          >
+            취소 (되돌리기)
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

@@ -3,6 +3,33 @@ import type { AiSettings } from "~utils/types"
 import { setNativeValue, sleep } from "~utils/utils"
 import { getCurrentCharacterName } from "./slot-shortcut"
 
+const DEFAULT_SYSTEM_PROMPT = `당신은 TTRPG 세션에서 NPC를 연기합니다.
+당신은 GM이 아닙니다. 당신은 오직 지정된 캐릭터의 대사, 태도, 감정, 행동 선언만 작성합니다.
+
+[권한]
+할 수 있는 것:
+- 지정된 캐릭터의 대사 작성
+- 지정된 캐릭터의 짧은 행동 묘사
+- 지정된 캐릭터의 의도와 행동 선언
+- 룰이나 정보가 불확실할 때 GM에게 질문
+
+하면 안 되는 것:
+- 다른 PC/NPC의 행동, 감정, 결과를 확정하기
+- 판정 결과를 확정하기
+- 지정된 캐릭터가 아닌 캐릭터 또는 한 번에 두 명 이상의 캐릭터를 롤플레잉 하기
+
+- 숨겨진 정보를 아는 것처럼 말하기
+- 세계관에 없는 설정, 조직, 유물, 비밀을 임의로 추가하기
+- 장면을 멋대로 전환하거나 종료하기
+- 플레이어의 의도를 대신 결정하기
+
+[출력 형식]
+- 캐릭터의 반응만 작성한다.
+- 응답의 맨 앞에 절대 캐릭터의 이름을 쓰지 않는다. (예: "[캐릭터]: " 와 같은 화자 표시 금지)
+- 대사는 5문장 이내로 제한한다. 큰 따옴표로 감싼다.
+- 필요한 경우 행동 묘사는 짧게 대사 뒤에 작성하며, 소괄호와 작은 따옴표로 감싼다. ('행동 묘사')
+- 판정이나 룰 확인이 필요하면 [GM 확인: ...]을 붙인다.`;
+
 export async function initAiChatBtn() {
   let undoHint = ""
   let isGenerating = false
@@ -40,35 +67,46 @@ export async function initAiChatBtn() {
       if (!roomId) throw new Error("방에 접속해 있지 않습니다.")
 
       const getSettings = () => new Promise<AiSettings>((resolve) => {
-        chrome.storage.local.get(`ai_settings_${roomId}`, (res) => {
-          resolve(res[`ai_settings_${roomId}`] as AiSettings)
+        chrome.storage.local.get("ai_settings_global", (res) => {
+          resolve(res["ai_settings_global"] as AiSettings)
         })
       })
 
       const settings = await getSettings()
-      if (!settings || !settings.apiKey) {
-        throw new Error("설정에서 OpenAI API 키를 먼저 등록해주세요.")
+      
+      const model = settings.model || "gpt-4.1-mini"
+      let provider = "openai"
+      if (model.includes("gemini")) provider = "gemini"
+      else if (model.includes("claude")) provider = "claude"
+      else if (model.includes("grok")) provider = "grok"
+
+      const apiKey = settings.apiKeys?.[provider] || settings.apiKey
+      if (!apiKey) {
+        throw new Error(`설정에서 ${provider.toUpperCase()} API 키를 먼저 등록해주세요.`)
       }
 
-      // Fetch recent 30 valid messages
-      const recentMessages = await ccf.messages.getRecentMessages(30)
+      // Fetch recent valid messages
+      const historyCount = settings.historyCount ?? 30
+      const recentMessages = await ccf.messages.getRecentMessages(historyCount)
 
       // Transform messages for OpenAI
       const chatHistory = recentMessages.map((msg: any) => {
+        const speaker = msg.type === "system" ? "System" : (msg.name || "Unknown")
         return {
           role: "user" as const,
-          content: `[${msg.name || "Unknown"}]: ${msg.text || ""}`
+          content: `[${speaker}]: ${msg.text || ""}`
         }
       })
 
       // We append the GM hint to the system prompt
-      const finalSystemPrompt = hint ? `${settings.systemPrompt || ""}\n\n${hint}` : (settings.systemPrompt || "")
+      const basePrompt = settings.systemPrompt || DEFAULT_SYSTEM_PROMPT
+      const finalSystemPrompt = hint ? `${basePrompt}\n\n${hint}` : basePrompt
 
       const reply = await ccf.ai.generateReply(
-        settings.apiKey,
+        apiKey,
         finalSystemPrompt,
         chatHistory,
-        "gpt-4o-mini"
+        model
       )
 
       setNativeValue(textarea, reply)

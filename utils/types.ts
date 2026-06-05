@@ -88,8 +88,11 @@ export type CcReq = {
 }
 
 export interface AiSettings {
-  apiKey: string
+  apiKey?: string
+  apiKeys?: { [provider: string]: string }
   systemPrompt: string
+  model?: string
+  historyCount?: number
 }
 
 export type CcRes =
