@@ -326,6 +326,9 @@ export async function injectOwnerTransferUI(dlg: HTMLElement, charId: string) {
     }
   }
 
+  // 스탠딩 섹션이 없다면 메인 캐릭터 편집창이 아닐 확률이 높으므로(이미지 선택창 등) 주입을 취소합니다.
+  if (!standingToolbar) return
+
   const standingBlock = standingToolbar?.parentElement
   const sectionClass = standingBlock?.className || ""
 
