@@ -36,6 +36,17 @@ export const ai = {
             finalSystemPrompt += `${p.label.replace("#AI", "#").trim()}: ${p.value}\n`
           })
         }
+
+        if (char.commands) {
+          const aiCommands = char.commands
+            .split("\n")
+            .filter((line: string) => line.trim().startsWith("//"))
+            .map((line: string) => line.trim().substring(2).trim())
+
+          if (aiCommands.length > 0) {
+            finalSystemPrompt += `[추가 설정/메모]\n${aiCommands.join("\n")}\n`
+          }
+        }
         finalSystemPrompt += "\n"
       }
     }
