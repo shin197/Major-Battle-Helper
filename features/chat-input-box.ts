@@ -23,8 +23,7 @@ function enableAutoClosingPairs(ev: KeyboardEvent) {
     "'": "'",
     "(": ")",
     "[": "]",
-    "{": "}",
-    "<": ">"
+    "{": "}"
   }
 
   const ta = ev.target as HTMLTextAreaElement
@@ -192,7 +191,7 @@ async function enterEditMode(ta: HTMLTextAreaElement, direction: "prev" | "next"
     if (targetMsg && (targetMsg.id || targetMsg._id)) {
       editingMessageId = targetMsg.id || targetMsg._id
       replaceInputText(ta, targetMsg.text || "")
-      
+
       updateEditHighlight(editingMessageId)
       showToast("✏️ 메시지 수정 모드 (Esc: 취소, Enter: 적용)")
     } else {
