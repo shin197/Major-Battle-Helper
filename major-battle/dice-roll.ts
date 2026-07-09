@@ -299,6 +299,8 @@ function calcSuccess(rawLine: string): DiceResult {
 
     const flags = tokens.filter((t) => !/^\+?\d+$/.test(t))
 
+    // console.log(`plus: ${plus} flags: ${flags}`)
+
     const dicePart = rawLine.match(/[＞>]\s*([\d,\s]+)\s*$/u)?.[1] ?? ""
 
     if (!dicePart) return { S: null, crit: 0 }
@@ -335,27 +337,12 @@ function calcSuccess(rawLine: string): DiceResult {
     const secDiceCount = dice.length - count
     for (let j = 0; j < secDiceCount; j++) {
       const secondaryDie = dice[count + j]
-      // if (secondaryDie === 1) {
-      //   exFail = true
-      //   bonusHit = false
-      // } else {
-      //   allExFail = false
-      // }
       exS += secondaryDie
       if (j === secDiceCount - 1) {
         bonusDie = secondaryDie
       }
-      // if (secondaryDie === tySize && !exFail) {
-      //   bonusHit = true
-      // }
     }
     exS += successBonus
-    // if (bonusHit) {
-    //   exS += plus
-    // }
-    // if (secDiceCount == 0) {
-    //   allExFail = false
-    // }
     let bonusHit = false
     let bonusCount = 0
 
@@ -403,6 +390,15 @@ function calcSuccess(rawLine: string): DiceResult {
       } else {
         crit = 1
       }
+    }
+    if (tySize === 0) {
+      S = 0
+      crit = 0
+      passDC = false
+      unitCount = 0
+      critCount = 0
+      bonusHit = false
+      bonusCount = 0
     }
     const diceResult = {
       S,
