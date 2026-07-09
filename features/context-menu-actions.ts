@@ -31,7 +31,31 @@ export function initContextMenuActions() {
   })
 
   bodyObserver.observe(document.body, { childList: true })
-  // console.log("✅ [Feature] 다중 선택 컨텍스트 메뉴 주입 기능 초기화")
+  
+  document.addEventListener("keydown", async (e) => {
+    if (e.key.toLowerCase() !== "z") return;
+    
+    const target = e.target as HTMLElement;
+    if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) return;
+
+    const state = await ccf.getReduxState();
+    const selectedObjects = state?.app?.state?.selectedObjects || [];
+    
+    if (selectedObjects.length === 0) return;
+
+    const validTokensInfo = selectedObjects.map((obj: any) => {
+      let _type = "";
+      if (obj.selectType === "item") _type = "roomItem";
+      else if (obj.selectType === "marker") _type = "roomMarker";
+      else if (obj.selectType === "deck") _type = "roomDeck";
+      return { ...obj, _type };
+    }).filter((obj: any) => obj._type);
+
+    if (validTokensInfo.length > 0) {
+      e.preventDefault();
+      promptOverlapPriority(validTokensInfo);
+    }
+  });
 }
 
 async function injectContextMenuItems(paper: HTMLElement) {
@@ -238,41 +262,47 @@ async function injectContextMenuItems(paper: HTMLElement) {
     // [3] "겹침 우선도(z) 직접 설정..." 버튼
     // ==========================================
     ul.append(createBtn("겹침 우선도...", async () => {
-      const input = window.prompt("새로운 겹침 우선도(z) 값을 입력하세요.\n(숫자만 입력 시 고정, '+5' 또는 '-2' 입력 시 현재 값에서 증감합니다.)")
-      if (input === null || input.trim() === "") return
+      await promptOverlapPriority(validTokensInfo)
+    }, "Z"))
+  }
+}
 
-      const isRelative = input.trim().startsWith("+") || input.trim().startsWith("-")
-      const parsedValue = parseInt(input, 10)
+async function promptOverlapPriority(validTokensInfo: Array<{ id: string; _type: string }>) {
+  if (validTokensInfo.length === 0) return;
+  const input = window.prompt("새로운 겹침 우선도(z) 값을 입력하세요.\n(숫자만 입력 시 고정, '+5' 또는 '-2' 입력 시 현재 값에서 증감합니다.)")
+  if (input === null || input.trim() === "") return
 
-      if (isNaN(parsedValue)) {
-        showToast("❗ 올바른 숫자를 입력해주세요.")
-        return
+  const isRelative = input.trim().startsWith("+") || input.trim().startsWith("-")
+  const parsedValue = parseInt(input, 10)
+
+  if (isNaN(parsedValue)) {
+    showToast("❗ 올바른 숫자를 입력해주세요.")
+    return
+  }
+
+  try {
+    const allTokens = await ccf.tokens.getAll()
+    const updates = validTokensInfo.map(obj => {
+      const isDeck = obj._type === "roomDeck"
+      let newZ = parsedValue
+      if (isRelative) {
+        const currentTokenData = allTokens.find(t => t.id === obj.id || t._id === obj.id)
+        const currentZ = isDeck ? (currentTokenData?.zIndex || 0) : (currentTokenData?.z || 0)
+        newZ = currentZ + parsedValue
       }
-
-      try {
-        const updates = validTokensInfo.map(obj => {
-          const isDeck = obj._type === "roomDeck"
-          let newZ = parsedValue
-          if (isRelative) {
-            const currentTokenData = allTokens.find(t => t.id === obj.id)
-            const currentZ = isDeck ? (currentTokenData?.zIndex || 0) : (currentTokenData?.z || 0)
-            newZ = currentZ + parsedValue
-          }
-          return {
-            id: obj.id,
-            _type: obj._type,
-            data: isDeck ? { zIndex: newZ } : { z: newZ }
-          }
-        })
-
-        if (updates.length > 0) {
-          await ccf.tokens.patchBulk(updates)
-          showToast(`✅ ${updates.length}개의 토큰의 겹침 우선도를 설정했습니다.`)
-        }
-      } catch (err) {
-        console.error("[MajorBattle] 다중 객체 겹침 우선도 설정 중 오류:", err)
-        showToast("❗ 겹침 우선도 설정 중 오류가 발생했습니다.")
+      return {
+        id: obj.id,
+        _type: obj._type,
+        data: isDeck ? { zIndex: newZ } : { z: newZ }
       }
-    }))
+    })
+
+    if (updates.length > 0) {
+      await ccf.tokens.patchBulk(updates)
+      showToast(`✅ ${updates.length}개의 토큰의 겹침 우선도를 설정했습니다.`)
+    }
+  } catch (err) {
+    console.error("[MajorBattle] 다중 객체 겹침 우선도 설정 중 오류:", err)
+    showToast("❗ 겹침 우선도 설정 중 오류가 발생했습니다.")
   }
 }
