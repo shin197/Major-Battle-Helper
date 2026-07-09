@@ -182,6 +182,7 @@ export const ccf = {
     getRecentMessages: (limit: number) => ccfoliaRPC<any[]>("messages.getRecentMessages", limit),
     delete: (messageId: string) => ccfoliaRPC<void>("messages.delete", messageId),
     edit: (messageId: string, newText: string) => ccfoliaRPC<void>("messages.edit", messageId, newText),
+    clearForDelete: (messageId: string) => ccfoliaRPC<void>("messages.clearForDelete", messageId),
     sendSystemMessage: (text: string, channel?: { channel: string; channelName: string }) =>
       ccfoliaRPC<void>("messages.sendSystemMessage", text, channel),
     sendMessageAsChar: (text: string, charName: string, iconUrl?: string, color?: string) =>

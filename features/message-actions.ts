@@ -247,18 +247,21 @@ function removeActions() {
 function doDelete(listItem: HTMLElement, msgId: string) {
   deletedMsgIds.add(msgId)
 
-  // 삭제 시 UI 즉각 반응을 위해 텍스트 비우기 (CSS :empty 매칭됨)
-  const sec = listItem.querySelector(".MuiListItemText-secondary")
-  const prevText = sec ? sec.textContent : ""
-  if (sec) sec.textContent = ""
+  // 즉각적인 숨김 처리를 위해 CSS 처리 (React DOM 충돌 방지용)
+  listItem.style.display = "none"
 
   removeActions()
 
-  // ccf.messages exposes a `delete(messageId)` which returns a Promise<void>
-  ccf.messages.delete(msgId).catch(() => {
-    // 실패 시 복구
+  // 1. API를 통해 빈 텍스트로 수정 (다른 클라이언트 즉시 동기화 및 숨김)
+  ccf.messages.clearForDelete(msgId).then(() => {
+    // 2. 그 다음 실제 삭제 수행
+    ccf.messages.delete(msgId).catch(() => {
+      deletedMsgIds.delete(msgId)
+      listItem.style.display = ""
+    })
+  }).catch(() => {
     deletedMsgIds.delete(msgId)
-    if (sec) sec.textContent = prevText
+    listItem.style.display = ""
   })
 }
 

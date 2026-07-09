@@ -422,6 +422,46 @@ export const messages = {
   },
 
   /**
+   * 삭제를 위해 메시지의 텍스트와 주사위 결과값을 모두 빈 문자열로 초기화합니다.
+   */
+  clearForDelete: async (messageId: string) => {
+    const { fsTools, db, roomId, store } = getServices()
+    const { setDoc, doc, collection } = fsTools
+    const state = store.getState()
+    
+    const payload: any = { 
+      text: "", 
+      updatedAt: Date.now() 
+    }
+
+    const messagesEntity = state.entities.roomMessages?.entities
+    if (messagesEntity && messagesEntity[messageId]) {
+      const targetMessage = messagesEntity[messageId]
+      if (targetMessage.extend && targetMessage.extend.roll) {
+        payload.extend = {
+          ...targetMessage.extend,
+          roll: {
+            ...targetMessage.extend.roll,
+            result: ""
+          }
+        }
+      }
+    }
+
+    try {
+      const messageRef = doc(
+        collection(db, "rooms", roomId, "messages"),
+        messageId
+      )
+      await setDoc(messageRef, payload, { merge: true })
+      return true
+    } catch (error) {
+      console.error("[API] 삭제용 메시지 초기화 실패:", error)
+      return false
+    }
+  },
+
+  /**
    * 특정 메시지의 주사위 굴림 결과를 Firestore에 직접 업데이트하여 모든 유저에게 동기화합니다.
    * @param messageId 조작할 메시지의 ID
    * @param newResultText 변경할 주사위 결과 텍스트 (예: "1D100<=50 ＞ 99 ＞ 펌블")
