@@ -60,27 +60,27 @@ export const tokens = {
     const tokens = [
       ...(roomItems
         ? roomItems.ids.map((id: string) => ({
-            ...roomItems.entities[id],
-            _type: "roomItem"
-          }))
+          ...roomItems.entities[id],
+          _type: "roomItem"
+        }))
         : []),
       ...(roomDecks
         ? roomDecks.ids.map((id: string) => ({
-            ...roomDecks.entities[id],
-            _type: "roomDeck"
-          }))
+          ...roomDecks.entities[id],
+          _type: "roomDeck"
+        }))
         : []),
       ...(roomDices
         ? roomDices.ids.map((id: string) => ({
-            ...roomDices.entities[id],
-            _type: "roomDice"
-          }))
+          ...roomDices.entities[id],
+          _type: "roomDice"
+        }))
         : []),
       ...(roomCharacters
         ? roomCharacters.ids.map((id: string) => ({
-            ...roomCharacters.entities[id],
-            _type: "roomCharacter"
-          }))
+          ...roomCharacters.entities[id],
+          _type: "roomCharacter"
+        }))
         : []),
 
       // 마커는 위에서 이미 매핑했으므로 바로 전개(...) 합니다.
@@ -248,11 +248,27 @@ export const tokens = {
       }
 
       if (addRoomItemFn) {
-        // 2. 코코포리아 네이티브 방식(Thunk)으로 데이터 쏘기
-        // Redux Thunk 구조이므로 store.dispatch(addRoomItemFn(payload)) 형태로 실행합니다.
+        const prevIds = store.getState().entities.roomItems?.ids || []
         await store.dispatch(addRoomItemFn(payload))
+
+        let createdId: string | undefined = undefined;
+        // Redux 업데이트 지연을 대비한 폴링 (최대 1.5초)
+        for (let i = 0; i < 10; i++) {
+          const newIds = store.getState().entities.roomItems?.ids || []
+          createdId = newIds.find((id: string) => !prevIds.includes(id))
+          if (createdId) break;
+          await new Promise(r => setTimeout(r, 50))
+        }
+
+        if (createdId && payload.z !== undefined) {
+          // 코코포리아 네이티브 로직이 z값을 덮어씌웠을 수 있으므로 잠시 대기 후 패치
+          setTimeout(() => {
+            tokens.patch(createdId as string, { z: payload.z }).catch(() => { })
+          }, 0)
+        }
+
         console.log("[API] 원본 함수를 이용해 스크린 패널(roomItem) 생성 완료!")
-        return
+        return createdId
       }
     } else if (type === "roomMarker") {
       baseTemplate = { ...baseTemplate, message: "", color: "#000000" }
@@ -283,9 +299,27 @@ export const tokens = {
 
       // 2-A. 탈취 성공: 원본 Redux Thunk로 Dispatch
       if (addMarkerFn) {
+        const prevMarkers = Object.keys(store.getState().entities.rooms?.entities[roomId]?.markers || {})
         await store.dispatch(addMarkerFn(payload))
+
+        let createdId: string | undefined = undefined;
+        // Redux 업데이트 지연을 대비한 폴링 (최대 1.5초)
+        for (let i = 0; i < 10; i++) {
+          const newMarkers = Object.keys(store.getState().entities.rooms?.entities[roomId]?.markers || {})
+          createdId = newMarkers.find((id: string) => !prevMarkers.includes(id))
+          if (createdId) break;
+          await new Promise(r => setTimeout(r, 50))
+        }
+
+        if (createdId && payload.z !== undefined) {
+          // 확실한 적용을 위해 추가 딜레이
+          setTimeout(() => {
+            tokens.patch(createdId as string, { z: payload.z, _type: "roomMarker" }).catch(() => { })
+          }, 0)
+        }
+
         console.log("[API] 원본 함수를 이용해 마커 패널 생성 완료!")
-        return // (Thunk는 ID를 바로 반환하지 않음)
+        return createdId
       }
       // 2-B. 탈취 실패: 수동(Fallback)으로 직접 계산해서 Firestore에 밀어넣기
       else {
@@ -306,7 +340,7 @@ export const tokens = {
           message: "",
           color: "#000000",
           locked: false,
-          z: maxZ + 1,
+          z: payload.z ?? maxZ,
           owner,
           createdAt: Date.now(),
           updatedAt: Date.now()
@@ -490,13 +524,13 @@ export const tokens = {
       // 끄기
       document.removeEventListener("mousemove", tokenHoverHandler)
       document.removeEventListener("click", tokenClickHandler)
-      ;(window as any).__CCFOLIA_TOKEN_INSPECTOR_ACTIVE = false
+        ; (window as any).__CCFOLIA_TOKEN_INSPECTOR_ACTIVE = false
       console.log("%c[API] 🕵️‍♂️ 토큰 인스펙터 OFF", "color: gray")
     } else {
       // 켜기
       document.addEventListener("mousemove", tokenHoverHandler)
       document.addEventListener("click", tokenClickHandler)
-      ;(window as any).__CCFOLIA_TOKEN_INSPECTOR_ACTIVE = true
+        ; (window as any).__CCFOLIA_TOKEN_INSPECTOR_ACTIVE = true
       console.log(
         "%c[API] 🕵️‍♂️ 토큰 인스펙터 ON - 캐릭터/다이스/덱/아이템 위에 마우스를 올리세요.",
         "color: #006400"
