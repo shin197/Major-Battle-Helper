@@ -1,4 +1,5 @@
 import { ccf } from "~core/isolated/ccfolia-api"
+import { showToast } from "~utils/isolated/toast"
 
 /**
  * drag-reorder.ts — 캐릭터 편집 다이얼로그에서
@@ -9,20 +10,7 @@ import { ccf } from "~core/isolated/ccfolia-api"
  * React 상태를 갱신한다.
  */
 
-/* ── React input value 브릿지 ────────────────────────── */
-const _nativeSetter = Object.getOwnPropertyDescriptor(
-  HTMLInputElement.prototype, "value"
-)?.set
-
-function setInputValue(input: HTMLInputElement, val: string) {
-  if (_nativeSetter) {
-    _nativeSetter.call(input, val)
-    input.dispatchEvent(new Event("input", { bubbles: true }))
-    input.dispatchEvent(new Event("change", { bubbles: true }))
-  }
-}
-
-/* ── DOM 헬퍼 ─────────────────────────────────────────── */
+/* ── 표정(스탠딩) 순서 변경 (Drag & Drop) ────────────────────────── */
 
 function getSectionRows(dlg: HTMLElement, sectionTitle: string): HTMLElement[] {
   for (const h of Array.from(dlg.querySelectorAll("h6"))) {
@@ -37,7 +25,7 @@ function getSectionRows(dlg: HTMLElement, sectionTitle: string): HTMLElement[] {
       if (sib.tagName === "DIV") {
         const inputs = sib.querySelectorAll("input")
         const imgs = sib.querySelectorAll("img")
-        if (inputs.length >= 2 || (inputs.length >= 1 && imgs.length >= 1)) {
+        if (inputs.length >= 1 && imgs.length >= 1) {
           rows.push(sib)
         }
       }
@@ -48,50 +36,7 @@ function getSectionRows(dlg: HTMLElement, sectionTitle: string): HTMLElement[] {
   return []
 }
 
-function readRow(row: HTMLElement) {
-  const inputs = row.querySelectorAll("input")
-  const imgs = row.querySelectorAll("img")
-  const d: { label: string; value?: string; max?: string; imgSrc?: string } = {
-    label: inputs[0]?.value || ""
-  }
-  if (inputs[1]) d.value = inputs[1].value || ""
-  if (inputs[2]) d.max = inputs[2].value || ""
-  if (imgs[0]) d.imgSrc = imgs[0].src || ""
-  return d
-}
-
-function writeRow(row: HTMLElement, data: { label: string; value?: string; max?: string; imgSrc?: string }) {
-  const inputs = row.querySelectorAll("input")
-  const imgs = row.querySelectorAll("img")
-
-  if (inputs[0]) setInputValue(inputs[0], data.label)
-  if (inputs[1] && data.value !== undefined) setInputValue(inputs[1], data.value)
-  if (inputs[2] && data.max !== undefined) setInputValue(inputs[2], data.max)
-
-  if (imgs[0] && data.imgSrc !== undefined) {
-    imgs[0].src = data.imgSrc
-  }
-}
-
-function reorder(rows: HTMLElement[], fromIdx: number, toIdx: number) {
-  const data = rows.map(readRow)
-  const [item] = data.splice(fromIdx, 1)
-  data.splice(toIdx, 0, item)
-
-  for (let i = 0; i < rows.length; i++) {
-    writeRow(rows[i], data[i])
-  }
-
-  rows[toIdx].style.background = "rgba(33,150,243,0.15)"
-  setTimeout(() => {
-    rows[toIdx].style.background = ""
-  }, 400)
-}
-
-/* ── 이벤트 델리게이션 ──────────────────────────────────── */
-
 let _dragRow: HTMLElement | null = null
-let _dragSectionTitle: string = ""
 let _lastOverRow: HTMLElement | null = null
 let _lastIsAbove: boolean | null = null
 
@@ -106,9 +51,9 @@ function getSectionTitleOfRow(row: HTMLElement): string {
   return ""
 }
 
-function setupDragEvents(dlg: HTMLElement) {
-  if (dlg.dataset.mbDragEvents === "true") return
-  dlg.dataset.mbDragEvents = "true"
+function setupDragEvents(dlg: HTMLElement, charId: string) {
+  if (dlg.dataset.mbExprDragEvents === "true") return
+  dlg.dataset.mbExprDragEvents = "true"
 
   dlg.addEventListener("dragstart", (e) => {
     const target = e.target as HTMLElement
@@ -122,8 +67,6 @@ function setupDragEvents(dlg: HTMLElement) {
 
     if (handle && row) {
       _dragRow = row
-      _dragSectionTitle = getSectionTitleOfRow(row)
-
       if (e.dataTransfer) {
         e.dataTransfer.effectAllowed = "move"
         e.dataTransfer.setDragImage(row, 30, row.offsetHeight / 2)
@@ -145,7 +88,7 @@ function setupDragEvents(dlg: HTMLElement) {
 
     if (row) {
       const title = getSectionTitleOfRow(row)
-      if (title !== _dragSectionTitle) return
+      if (title !== "스탠딩" && title !== "立ち絵") return
 
       e.preventDefault()
       if (e.dataTransfer) e.dataTransfer.dropEffect = "move"
@@ -163,7 +106,7 @@ function setupDragEvents(dlg: HTMLElement) {
         if (row === _dragRow) {
           showLine = false
         } else {
-          const rows = getSectionRows(dlg, _dragSectionTitle)
+          const rows = getSectionRows(dlg, title)
           const fromIdx = rows.indexOf(_dragRow)
           const toIdx = rows.indexOf(row)
 
@@ -187,7 +130,7 @@ function setupDragEvents(dlg: HTMLElement) {
     }
   })
 
-  dlg.addEventListener("drop", (e) => {
+  dlg.addEventListener("drop", async (e) => {
     if (!_dragRow) return
     e.preventDefault()
 
@@ -196,8 +139,8 @@ function setupDragEvents(dlg: HTMLElement) {
 
     if (dropRow && dropRow !== _dragRow) {
       const title = getSectionTitleOfRow(dropRow)
-      if (title === _dragSectionTitle) {
-        const rows = getSectionRows(dlg, _dragSectionTitle)
+      if (title === "스탠딩" || title === "立ち絵") {
+        const rows = getSectionRows(dlg, title)
         const fromIdx = rows.indexOf(_dragRow)
         const toIdx = rows.indexOf(dropRow)
 
@@ -211,7 +154,32 @@ function setupDragEvents(dlg: HTMLElement) {
           }
 
           if (fromIdx !== insertIdx) {
-            reorder(rows, fromIdx, insertIdx)
+            // await 도중 dragend가 발생해 _dragRow가 null이 되는 것을 방지하기 위해 캡처
+            const draggedRow = _dragRow;
+
+            try {
+              const charData = await ccf.characters.getById(charId)
+              if (charData && charData.faces) {
+                const newFaces = [...charData.faces]
+                const [movedFace] = newFaces.splice(fromIdx, 1)
+                newFaces.splice(insertIdx, 0, movedFace)
+
+                await ccf.characters.update(charId, { faces: newFaces })
+                console.log(`[BattleHelper] 표정 순서 변경 완료: ${fromIdx} -> ${insertIdx}`)
+
+                // 시각적 피드백: 임시로 DOM을 조작하여 바뀐 것처럼 보여줌 (React 상태는 안 바뀜)
+                const parent = draggedRow.parentNode;
+                const referenceNode = fromIdx < insertIdx ? dropRow.nextSibling : dropRow;
+                if (parent && referenceNode !== draggedRow) {
+                  parent.insertBefore(draggedRow, referenceNode);
+                }
+
+                showToast("✅ 표정 순서가 저장되었습니다. (창을 닫았다가 다시 열면 완벽히 적용됩니다)");
+
+              }
+            } catch (err) {
+              console.error("[BattleHelper] 표정 순서 변경 실패:", err)
+            }
           }
         }
       }
@@ -287,24 +255,17 @@ function addDragHandles(rows: HTMLElement[]) {
   }
 }
 
-export function injectDragReorder(dlg: HTMLElement) {
-  setupDragEvents(dlg)
+function injectExpressionDragReorder(dlg: HTMLElement, charId: string) {
+  setupDragEvents(dlg, charId)
 
-  const pairs = [
-    ["스테이터스", "ステータス"],
-    ["매개변수", "パラメータ"],
-    ["스탠딩", "立ち絵"]
-  ]
-  for (const [ko, ja] of pairs) {
-    let rows = getSectionRows(dlg, ko)
-    if (!rows.length) rows = getSectionRows(dlg, ja)
+  const pairs = ["스탠딩", "立ち絵"]
+  for (const title of pairs) {
+    const rows = getSectionRows(dlg, title)
     if (rows.length >= 2) {
       addDragHandles(rows)
     }
   }
 }
-
-/* ── 소유권 변경 UI ─────────────────────────────────────── */
 
 export async function injectOwnerTransferUI(dlg: HTMLElement, charId: string) {
   if (dlg.querySelector(".mb-owner-transfer")) return
@@ -460,15 +421,15 @@ export async function injectOwnerTransferUI(dlg: HTMLElement, charId: string) {
 /* ── 통합 진입점 ────────────────────────────────────────── */
 
 export function injectCharacterEditFeatures(dlg: HTMLElement, charId: string) {
-  // 드래그 앤 드롭
-  injectDragReorder(dlg)
+  // 표정 순서 변경 주입
+  injectExpressionDragReorder(dlg, charId)
 
   let isInjecting = false
   const obs = new MutationObserver(() => {
     if (isInjecting) return
     isInjecting = true
     requestAnimationFrame(() => {
-      injectDragReorder(dlg)
+      injectExpressionDragReorder(dlg, charId)
       isInjecting = false
     })
   })
