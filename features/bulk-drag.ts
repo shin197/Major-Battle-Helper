@@ -111,13 +111,17 @@ const hideSelectRect = () => {
   if (selectRectEl) selectRectEl.style.display = "none"
 }
 
-const syncReduxSelection = async () => {
+let lockedTokensExcluded = false
+
+const syncReduxSelection = async (excludeLocked = false) => {
   try {
     const objects: Array<{ selectType: string; id: string }> = []
+    lockedTokensExcluded = excludeLocked
 
     if (selected.size > 0) {
       const allTokens = await ccf.tokens.getAll()
       for (const el of selected) {
+        if (excludeLocked && isPanelLocked(el)) continue
         const domId = findItemIdFromDom(el)
         if (!domId) continue
         const tokenData = allTokens.find((t: any) => {
@@ -277,7 +281,7 @@ const updateGhostPositions = (dx: number, dy: number) => {
   })
 }
 
-const isPanelLocked = (panel: HTMLElement): boolean => {
+function isPanelLocked(panel: HTMLElement): boolean {
   return (
     panel.getAttribute("aria-disabled") === "true" ||
     !!panel.querySelector('[aria-disabled="true"]')
@@ -491,7 +495,10 @@ const onPointerDown = (e: PointerEvent) => {
     if (!isEventInsideSelectionArea(e)) return
 
     const root = getPanelRoot(e.target)
-    if (root && selected.has(root) && selected.size > 1) {
+    if (root && selected.has(root) && selected.size > 0) {
+      // 드래그가 시작될 수 있으므로 잠긴 토큰 임시 제외 (네이티브 드래그 고스트 방지)
+      void syncReduxSelection(true)
+
       const leaderId =
         findItemIdFromDom(e.target as HTMLElement) || findItemIdFromDom(root)
       if (leaderId) {
@@ -530,6 +537,12 @@ const onPointerUp = (e: PointerEvent) => {
     endRectSelection()
     return
   }
+  
+  // 마우스에서 손을 떼면 잠시 제외했던 잠긴 토큰들을 다시 Redux에 동기화
+  if (lockedTokensExcluded) {
+    void syncReduxSelection(false)
+  }
+
   if (groupDragging && e.button === 0) void finishGroupDrag()
 }
 
