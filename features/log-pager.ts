@@ -100,7 +100,7 @@ function getFirstVisibleIndex(container: HTMLElement): number | null {
 // 툴바가 있는 form 하단 #3번째 div 를 찾는다
 function getToolbarMount(): HTMLElement | null {
   const strict = document.querySelector<HTMLElement>(
-    "#root div.MuiDrawer-docked > div > div > form > div:nth-child(3)"
+    "#root div.MuiDrawer-docked > div > div > form > div:nth-child(5)"
   )
   if (strict) return strict
 

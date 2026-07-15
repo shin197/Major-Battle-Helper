@@ -39,13 +39,13 @@ export const ANCHOR_SPECS = {
   CHARACTER_NAME_INPUT: {
     key: "character-name-input",
     selector:
-      "#root > div > div.MuiDrawer-root.MuiDrawer-docked> div > div > form > div:nth-child(2) > div > div > input"
+      "#root > div > div.MuiDrawer-root.MuiDrawer-docked> div > div > form > div:nth-child(4) > div > div > input"
   } as AnchorSpec<HTMLInputElement>,
 
   CHARACTER_CHAT_PALETTE_EDIT_BTN: {
     key: "character-chat-palette-edit-btn",
     selector:
-      "#root > div > div.MuiDrawer-root.MuiDrawer-docked > div > div > form > div:nth-child(2) > div:nth-child(3) > button"
+      "#root > div > div.MuiDrawer-root.MuiDrawer-docked > div > div > form > div:nth-child(4) > div:nth-child(3) > button"
   } as AnchorSpec<HTMLButtonElement>,
 
   CHARACTER_LIST_BTN: {
