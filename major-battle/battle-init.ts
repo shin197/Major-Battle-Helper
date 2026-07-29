@@ -87,7 +87,7 @@ export async function capStatus(mustCap: string[] = []) {
 export async function initBattle(commandLine: string = "") {
   try {
     let content = commandLine.replace(/^\/battle\s*/, "").trim()
-    
+
     // 대상 캐릭터 파싱: [캐릭터A] [캐릭터B]
     const targetNames: string[] = []
     content = content.replace(/\[(.*?)\]/g, (match, name) => {
@@ -246,6 +246,8 @@ export async function handleDmgCommand(
     const unitCount = unitStatus ? Math.max(1, unitStatus.value) : 1
 
     let dmg = dmgAmount
+    let decdef = 0
+    let dechit = 0
 
     if (dmgType.includes("절반")) {
       dmg = Math.floor(dmg / 2)
@@ -260,6 +262,7 @@ export async function handleDmgCommand(
     dmg -= armor * hitCount
 
     // 방어도를 피해만큼 차감
+    decdef = Math.min(Math.max(0, dmg), def)
     def -= Math.max(0, dmg)
 
     // 방어도가 막아냈을 때 (관통/폭발 등 체력 피해 없이 여기서 종료)
@@ -270,6 +273,7 @@ export async function handleDmgCommand(
       let message = `⚔️ ${target.name}의 방어도가 ${dmgAmount}`
       let typeMessage = " 피해를"
       let countMessage = " 막았습니다."
+      let decdefMessage = `방어도 ${decdef} 감소`
       if (dmgType !== "일반") {
         typeMessage = `의 ${dmgType}형 피해를`
       }
@@ -277,6 +281,7 @@ export async function handleDmgCommand(
         countMessage = ` 총 ${hitCount}회에 걸쳐서 막아냈습니다.`
       }
       message += typeMessage + countMessage
+      if (decdef > 0) message += "\n" + decdefMessage
       showToast(message)
       await ccf.messages.sendSystemMessage(message)
 
@@ -309,6 +314,7 @@ export async function handleDmgCommand(
 
     // 방어도가 음수라면 남은 방어도만큼 HP에서 차감
     hp -= Math.max(0, -def)
+    dechit = Math.max(0, -def)
     def = 0
 
     let kills = 0
@@ -333,6 +339,8 @@ export async function handleDmgCommand(
       let message = `⚔️ ${target.name}에게 ${dmgAmount}`
       let typeMessage = " 피해를"
       let countMessage = " 입혔습니다."
+      let dechitMessage = `체력 ${dechit} 감소`
+      let decdefMessage = `방어도 ${decdef} 감소`
       if (dmgType !== "일반") {
         typeMessage = `의 ${dmgType}형 피해를`
       }
@@ -346,6 +354,15 @@ export async function handleDmgCommand(
       } else if (kills > 0) {
         message += ` (${kills}기 처치)`
       }
+
+      if (dechit > 0) {
+        if (decdef > 0) {
+          message += "\n" + dechitMessage + ", " + decdefMessage
+        } else {
+          message += "\n" + dechitMessage
+        }
+      }
+
       showToast(message)
       await ccf.messages.sendSystemMessage(message)
     } catch (e) {
