@@ -231,7 +231,8 @@ export async function handleDmgCommand(
     dmgAmount: number,
     dmgType: string,
     hitCount: number,
-    isPrimaryWithSplash: boolean
+    isPrimaryWithSplash: boolean,
+    splashTargets: CcfoliaCharacter[] = []
   ) {
     const armorParam = target.params.find((p) => p.label === "장갑")
     const armor = armorParam ? parseInt(armorParam.value, 10) || 0 : 0
@@ -249,7 +250,7 @@ export async function handleDmgCommand(
     let decdef = 0
     let dechit = 0
 
-    if (dmgType.includes("절반")) {
+    if (dmgType.includes("절반") || dmgType.includes("엄폐")) {
       dmg = Math.floor(dmg / 2)
     }
 
@@ -294,12 +295,12 @@ export async function handleDmgCommand(
     // --- [핵심] 방사(Splash) 피해 확산 로직 ---
     // 조건: 첫 번째 대상이고, '방사' 타입이며, 방어도를 뚫은 피해량이 0보다 클 때
     if (isPrimaryWithSplash && penDamage > 0) {
-      const splashTargets = targets.slice(1) // 자신을 제외한 나머지 캐릭터들
-      const splashType = dmgType.replace(/방사/g, "폭발") // 방사를 폭발로 대체
+      // 방사를 폭발로 대체하고, 이미 반감된 피해량이 또 절반으로 깎이지 않도록 '절반', '엄폐' 키워드를 제거합니다.
+      const splashType = dmgType.replace(/방사/g, "폭발").replace(/절반|엄폐/g, "")
 
       for (const splashTarget of splashTargets) {
         // 남은 피해량(penDamage)을 폭발 타입으로 나머지 대상들에게 가함 (count는 1회로 취급)
-        await processDamage(splashTarget, penDamage, splashType, 1, false)
+        await processDamage(splashTarget, penDamage, splashType, 1, false, [])
       }
     }
 
@@ -373,14 +374,26 @@ export async function handleDmgCommand(
   // ==========================================
   // 5. 대상에 따른 데미지 적용 실행
   // ==========================================
-  if (type.includes("방사")) {
+  if (type.includes("엄폐방사") && targets.length >= 2) {
+    // 엄폐방사: 첫 번째 타겟은 주 타겟, 두 번째는 보호자, 세 번째부터는 추가 방사 타겟
+    const protector = targets[1]
+    const mainTargets = [targets[0], ...targets.slice(2)]
+
+    // 1. 보호자(두 번째 타겟)에게 절반폭발 따로 처리
+    const protectorType = type.replace(/엄폐방사/g, "절반폭발")
+    await processDamage(protector, amount, protectorType, count, false, [])
+
+    // 2. 메인 타겟들에게 절반방사 처리 (주 타겟이 데미지를 받은 후 남은 피해가 세 번째 이후 타겟에게 방사됨)
+    const mainType = type.replace(/엄폐방사/g, "절반방사")
+    await processDamage(mainTargets[0], amount, mainType, count, true, mainTargets.slice(1))
+  } else if (type.includes("방사")) {
     // '방사' 타입일 경우: 첫 번째 캐릭터에게만 전체 로직(isPrimaryWithSplash = true)을 실행.
     // 나머지 대상들은 processDamage 내부의 확산 로직에 의해 자동으로 피해를 받습니다.
-    await processDamage(targets[0], amount, type, count, true)
+    await processDamage(targets[0], amount, type, count, true, targets.slice(1))
   } else {
     // '방사' 타입이 아닐 경우: 지정된 모든 캐릭터들에게 동일한 데미지를 각각 적용합니다.
     for (const target of targets) {
-      await processDamage(target, amount, type, count, false)
+      await processDamage(target, amount, type, count, false, [])
     }
   }
 }
