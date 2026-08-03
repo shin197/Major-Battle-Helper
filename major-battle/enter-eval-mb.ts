@@ -10,6 +10,7 @@ import { setNativeValue } from "~utils/utils"
 import {
   capStatus,
   handleDmgCommand,
+  handleHealCommand,
   initBattle,
   setUnitCount
 } from "./battle-init"
@@ -82,6 +83,11 @@ export async function evalChatInputBoxMajorBattle(ev: KeyboardEvent) {
     }
     if (/^\/(unit|u|ㅕ)(?:\s+|$)/.test(finalVal)) {
       await setUnitCount(character, finalVal)
+      finalVal = ""
+    }
+    // /heal, /h, /ㅗ 명령어 감지
+    if (/^\/(heal|h|ㅗ)(?:\s+|$)/.test(finalVal)) {
+      await handleHealCommand(character, finalVal)
       finalVal = ""
     }
     if (finalVal.startsWith("/battle")) {

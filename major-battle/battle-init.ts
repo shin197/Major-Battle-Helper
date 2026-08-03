@@ -489,3 +489,94 @@ export async function setUnitCount(
     showToast("❌ 스테이터스 보정 중 오류가 발생했습니다.")
   }
 }
+
+export async function handleHealCommand(
+  character: CcfoliaCharacter | null,
+  commandLine: string
+) {
+  let content = commandLine.replace(/^\/(heal|h|ㅗ)\s+/, "").trim()
+  if (!content) return
+
+  const targetNames: string[] = []
+  content = content.replace(/\[(.*?)\]/g, (match, name) => {
+    targetNames.push(name.trim())
+    return ""
+  })
+
+  const targets: CcfoliaCharacter[] = []
+  if (targetNames.length > 0) {
+    for (const name of targetNames) {
+      const char = await ccf.getCharacterByName(name)
+      if (char) targets.push(char)
+      else showToast(`❗ 캐릭터 '${name}'를 찾을 수 없습니다.`)
+    }
+  } else if (character) {
+    targets.push(character)
+  }
+
+  if (targets.length === 0) {
+    showToast(`❗ 회복을 적용할 대상 캐릭터가 없습니다.`)
+    return
+  }
+
+  const args = content
+    .trim()
+    .split(/\s+/)
+    .filter((p) => p.length > 0)
+
+  let amountStr = ""
+  let type = ""
+
+  for (const arg of args) {
+    if (/^\d+(\.\d+)?$/.test(arg)) {
+      amountStr = arg
+    } else {
+      type += arg
+    }
+  }
+
+  const isDef = type.includes("방어")
+  const targetStatusLabel = isDef ? "DEF" : "HP"
+  const actionWord = isDef ? "방어도가" : "체력이"
+
+  for (const target of targets) {
+    const status = target.status.find((s) => s.label === targetStatusLabel)
+    if (!status) continue
+
+    let amountToHeal = 0
+    let newValue = status.value
+
+    if (amountStr === "") {
+      amountToHeal = Math.max(0, status.max - status.value)
+      newValue = Math.max(status.value, status.max)
+    } else {
+      amountToHeal = parseFloat(amountStr) || 0
+      newValue += amountToHeal
+    }
+
+    if (amountToHeal > 0) {
+      let updatePayload: Record<string, number> = {
+        [targetStatusLabel]: Math.floor(newValue)
+      }
+
+      if (!isDef) {
+        const unitStatus = target.status.find((s) => s.label === "#")
+        if (unitStatus) {
+          const maxUnits = Math.ceil(Math.max(0, newValue) / (status.max || 1))
+          updatePayload["#"] = maxUnits
+        }
+      }
+
+      await ccf.patchCharacter(target.name, {
+        status: updatePayload
+      })
+
+      let message = `\u{1F496} ${target.name}의 ${actionWord} ${amountToHeal} 회복되었습니다.`
+      if (amountStr === "") {
+        message = `\u{1F496} ${target.name}의 ${actionWord} 모두 회복되었습니다.`
+      }
+      showToast(message)
+      await ccf.messages.sendSystemMessage(message)
+    }
+  }
+}
