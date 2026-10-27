@@ -1,7 +1,7 @@
 // features/token-alt-click.ts
 
 import { ccf } from "~core/isolated/ccfolia-api"
-import { getChatInputBox, getPanelRoot } from "~utils/elements"
+import { getChatInputBox, getPanelRoot, getCurrentCharacterNameInput } from "~utils/elements"
 import { findItemIdFromDom } from "~utils/main/token"
 import { setNativeValue } from "~utils/utils"
 
@@ -74,6 +74,47 @@ export function initTokenAltClick() {
           } catch (err) {
             console.error(
               "[BattleHelper] Alt+클릭 캐릭터 정보 가져오기 실패:",
+              err
+            )
+          }
+        })()
+      }
+
+      // ==========================================================
+      // 신규 기능: Ctrl + 좌클릭으로 현재 화자를 해당 캐릭터로 전환
+      // ==========================================================
+      if (e.button === 0 && e.ctrlKey && !e.altKey) {
+        const root = getPanelRoot(e.target as HTMLElement)
+        if (!root) return
+
+        e.preventDefault()
+        e.stopImmediatePropagation()
+        e.stopPropagation()
+
+        const targetId =
+          findItemIdFromDom(e.target as HTMLElement) || findItemIdFromDom(root)
+        if (!targetId) return
+
+        ;(async () => {
+          try {
+            const character = await ccf.characters.getById(targetId)
+            if (!character || !character.name) return
+
+            const nameInput = getCurrentCharacterNameInput()
+            if (nameInput) {
+              setNativeValue(nameInput, character.name)
+            }
+
+            // 채팅창으로 포커스 이동
+            const ta = getChatInputBox()
+            if (ta) {
+              setTimeout(() => {
+                ta.focus()
+              }, 0)
+            }
+          } catch (err) {
+            console.error(
+              "[BattleHelper] Ctrl+클릭 화자 전환 실패:",
               err
             )
           }

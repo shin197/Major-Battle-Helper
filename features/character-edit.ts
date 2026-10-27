@@ -335,7 +335,7 @@ export async function injectOwnerTransferUI(dlg: HTMLElement, charId: string) {
   displayBtn.style.padding = "4px 0"
 
   function renderMemberItem(name: string, photoUrl: string | null) {
-    const defaultPhoto = "https://ccfolia.com/images/logo.png"
+    const defaultPhoto = "https://ccfolia.com/ccfolia.png"
     return `
       <div style="display: flex; align-items: center; gap: 12px; padding: 4px 8px; box-sizing: border-box; width: 100%;">
         <div class="MuiAvatar-root MuiAvatar-circular" style="width: 40px; height: 40px; overflow: hidden; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">

@@ -363,9 +363,9 @@ function calcSuccess(rawLine: string): DiceResult {
         S += exS
         crit = 1
       } else {
-        // if (secDiceCount > 0) {
-
-        // }
+        if (secDiceCount == 0) {
+          exS = plus
+        }
         S += primaryDie + exS
         crit = 2
         critCount += 1

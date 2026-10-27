@@ -17,8 +17,8 @@ export const uuid = () => {
   return `${Date.now()}_${Math.random().toString(16).slice(2)}`
 }
 
-export const setNativeValue = (el: HTMLTextAreaElement, value: string) => {
-  const proto = Object.getPrototypeOf(el) as HTMLTextAreaElement
+export const setNativeValue = (el: HTMLTextAreaElement | HTMLInputElement, value: string) => {
+  const proto = Object.getPrototypeOf(el)
   const setter = Object.getOwnPropertyDescriptor(proto, "value")?.set
   setter?.call(el, value)
   el.dispatchEvent(new Event("input", { bubbles: true }))
